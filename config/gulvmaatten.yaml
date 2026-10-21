@@ -47,5 +47,6 @@ hoej_risiko:
   - navngivne-personer
   - kontroversielt
 
-# Automatisk publicering er slået fra i første fase.
-automatisk_publicering: false
+# Publicér nye artikler med det samme uden at vente på en redaktør.
+# Det kan slås til og fra i redaktionsværktøjet. Indstillingen dér vinder over denne.
+automatisk_publicering: true

@@ -34,3 +34,17 @@ def test_event(db):
     eid = db.save_event(e)
     e.aflyst = True
     assert db.save_event(e) == eid
+
+
+def test_gammel_praktisk_flyttes_ud_af_broedteksten(tmp_path):
+    from gulvmaatten.db import Database
+    sti = tmp_path / "gammel.db"
+    db = Database(sti)
+    a = Article(overskrift="X", resume="", broedtekst="Tekst.\n\nPraktisk:\nHvor: Her\nPris: Gratis",
+                kategori="kultur", by="Glostrup")
+    db.save_article(a)
+    db.close()
+    db = Database(sti)
+    flyttet = db.get_article(a.id)
+    assert flyttet.broedtekst == "Tekst." and flyttet.praktisk == "Hvor: Her\nPris: Gratis"
+    db.close()

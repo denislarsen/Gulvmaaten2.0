@@ -7,12 +7,12 @@ se, hvor en sag står.
 |---|---|---|
 | 1. Overvågning | Crawleren henter kilderne efter deres frekvens | Bygget |
 | 2. Registrering | Nye og ændrede opslag gemmes som RawItems | Bygget |
-| 3. Filtrering | Agent vurderer lokal nyhedsværdi og frasorterer støj | Næste |
-| 4. Research | Agent sammenholder kilder og tjekker dato, sted, pris m.m. | Næste |
-| 5. Udkast | Agent skriver kort artikel med kildeangivelse | Næste |
+| 3. Filtrering | Agent vurderer lokal nyhedsværdi og frasorterer støj | Bygget |
+| 4. Research | Agent sammenholder kilder og tjekker dato, sted, pris m.m. | Bygget |
+| 5. Udkast | Agent skriver kort artikel med kildeangivelse | Bygget |
 | 6. Kvalitetssikring | Automatisk tjek for manglende kilder, dubletter, persondata, risiko | Senere |
-| 7. Review | Redaktør godkender eller afviser | Senere |
-| 8. Publicering | Godkendte artikler lægges på hjemmesiden | Senere |
+| 7. Review | Redaktør godkender eller afviser (eller autogodkendelse) | Bygget |
+| 8. Publicering | Godkendte artikler lægges på hjemmesiden | Bygget |
 | 9. Opfølgning | Ændrede RawItems udløser opdatering af artikel/arrangement | Senere |
 
 ## Regler agenten skal overholde

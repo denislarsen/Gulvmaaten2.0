@@ -1,0 +1,17 @@
+<li class="arrangement">
+  {% if a.arrangement_start %}
+  <div class="kalenderblad" aria-hidden="true">
+    <span class="dag">{{ a.arrangement_start.day }}</span>
+    <span class="maaned">{{ (a.arrangement_start|dato(ugedag=False)).split(' ')[1][:3] }}</span>
+  </div>
+  {% else %}
+  <div class="kalenderblad tom" aria-hidden="true"><span class="dag">–</span></div>
+  {% endif %}
+  <div>
+    <h3><a href="{{ url_for('artikel', slug=p.slug) }}">{{ a.overskrift }}</a></h3>
+    <p class="meta">
+      {% if a.arrangement_start %}{{ a.arrangement_start|dato|capitalize }}{% if a.arrangement_start|klokken %} {{ a.arrangement_start|klokken }}{% endif %}<br>{% endif %}
+      {% for navn, vaerdi in a.praktisk|praktisk if navn == 'Hvor' %}{{ vaerdi }}{% endfor %}
+    </p>
+  </div>
+</li>

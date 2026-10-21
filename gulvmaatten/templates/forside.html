@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block indhold %}
+<div class="forside">
+  <section class="kolonne-nyheder" aria-labelledby="nyheder-titel">
+    <h2 class="sektionstitel" id="nyheder-titel">Nyheder{% if g.by %} fra {{ BYER[g.by] }}{% endif %}</h2>
+    {% for a, p in nyheder %}
+      {% with top = loop.first %}{% include "_nyhed.html" %}{% endwith %}
+    {% else %}
+      <p class="tomt">Der er ingen nyheder endnu. Robotten kigger efter nye hver time.</p>
+    {% endfor %}
+  </section>
+  <aside class="kolonne-arrangementer" aria-labelledby="arrangementer-titel">
+    <h2 class="sektionstitel" id="arrangementer-titel">Det sker{% if g.by %} i {{ BYER[g.by] }}{% endif %}</h2>
+    <ul class="arrangementer">
+      {% for a, p in arrangementer %}
+        {% include "_arrangement.html" %}
+      {% else %}
+        <li class="tomt">Der er ingen kommende arrangementer endnu.</li>
+      {% endfor %}
+    </ul>
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+{% extends "redaktion/_ramme.html" %}
+{% block indhold %}
+<section class="kort smal">
+  <h1>Log ind</h1>
+  <form method="post">
+    <label for="kodeord">Kodeord</label>
+    <input id="kodeord" name="kodeord" type="password" autocomplete="current-password" required autofocus>
+    <button class="knap">Log ind</button>
+  </form>
+</section>
+{% endblock %}

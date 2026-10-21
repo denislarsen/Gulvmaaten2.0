@@ -1,0 +1,71 @@
+{% extends "redaktion/_ramme.html" %}
+{% block indhold %}
+<div class="redaktion">
+  <section>
+    <h1 class="sektionstitel">Artikler</h1>
+    <ul class="faner">
+      {% for s in ['needs_review', 'published', 'rejected', 'retracted'] %}
+      <li><a href="?status={{ s }}" class="{{ 'valgt' if vis == s }}">{{ STATUS_NAVNE[s] }} <span class="antal">{{ antal.get(s, 0) }}</span></a></li>
+      {% endfor %}
+      <li><a href="?status=alle" class="{{ 'valgt' if vis == 'alle' }}">Alle</a></li>
+    </ul>
+    {% if artikler %}
+    <table class="liste">
+      <thead><tr><th>Overskrift</th><th>By</th><th>Risiko</th><th>Usikkert</th><th>Oprettet</th></tr></thead>
+      <tbody>
+      {% for a in artikler %}
+        <tr>
+          <td><a href="{{ url_for('ret_artikel', article_id=a.id) }}">{{ a.overskrift }}</a>
+            <span class="lille-tekst">{{ a.kategori|replace('-', ' ') }} · {{ STATUS_NAVNE[a.status.value] }}</span></td>
+          <td>{{ a.by }}</td>
+          <td><span class="risiko {{ a.risiko.value }}">{{ RISIKO_NAVNE[a.risiko.value] }}</span></td>
+          <td>{{ (a.usikkerheder|linjer)|length or '–' }}</td>
+          <td>{{ a.oprettet|dato(ugedag=False) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="tomt">Ingen artikler her.</p>
+    {% endif %}
+  </section>
+
+  <aside class="sidepanel">
+    <section class="kort">
+      <h2>Godkendelse</h2>
+      <form method="post" action="{{ url_for('indstillinger') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <label class="valg"><input type="radio" name="autogodkend" value="1" {{ 'checked' if autogodkend }}> Publicér nye artikler automatisk</label>
+        <label class="valg"><input type="radio" name="autogodkend" value="0" {{ 'checked' if not autogodkend }}> Nye artikler venter på godkendelse</label>
+        <button class="knap lille">Gem</button>
+      </form>
+      {% if autogodkend %}<p class="lille-tekst">Du kan stadig rette eller trække enhver artikel tilbage bagefter.</p>{% endif %}
+    </section>
+
+    <section class="kort">
+      <h2>Robotten</h2>
+      {% if robot.koerer %}
+        <p>Robotten er i gang nu.</p>
+      {% elif robot.sidst_faerdig %}
+        <p>Sidst kørt {{ robot.sidst_faerdig|dato(ugedag=False) }} {{ robot.sidst_faerdig|klokken }}.
+        {% if robot.naeste %}Næste gang {{ robot.naeste|klokken }}.{% endif %}</p>
+      {% else %}
+        <p>Robotten har ikke kørt endnu, siden siden blev startet.</p>
+      {% endif %}
+      {% if robot.fejl %}<p class="fejl">Fejl: {{ robot.fejl }}</p>{% endif %}
+      {% if robot.linjer %}<pre class="log">{{ robot.linjer|join('\n') }}</pre>{% endif %}
+      {% if not har_noegle %}<p class="fejl">Der er ingen API-nøgle, så robotten henter kun kilder og skriver ikke artikler.</p>{% endif %}
+      <form method="post" action="{{ url_for('koer_robot') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <button class="knap lille sekundaer" {{ 'disabled' if robot.koerer }}>Kør robotten nu</button>
+      </form>
+    </section>
+
+    <section class="kort">
+      <h2>Sikkerhedskopi</h2>
+      <p>Hent en kopi af hele databasen med alle artikler og kilder. Gem den et sikkert sted.</p>
+      <a class="knap lille sekundaer" href="{{ url_for('backup') }}">Hent kopi</a>
+    </section>
+  </aside>
+</div>
+{% endblock %}

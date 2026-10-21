@@ -1,0 +1,98 @@
+{% extends "redaktion/_ramme.html" %}
+{% block indhold %}
+<p class="tilbage"><a href="{{ url_for('redaktion') }}">← Tilbage til oversigten</a></p>
+<div class="redaktion">
+  <form method="post" class="retform">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <h1 class="sektionstitel">Ret artikel</h1>
+
+    <label for="overskrift">Overskrift</label>
+    <input id="overskrift" name="overskrift" value="{{ a.overskrift }}" required>
+
+    <label for="resume">Indledning</label>
+    <textarea id="resume" name="resume" rows="3">{{ a.resume }}</textarea>
+
+    <label for="broedtekst">Brødtekst <span class="hjaelp">Lav en tom linje mellem afsnit.</span></label>
+    <textarea id="broedtekst" name="broedtekst" rows="12">{{ a.broedtekst }}</textarea>
+
+    <label for="praktisk">Praktisk <span class="hjaelp">Ét punkt pr. linje, fx "Hvor: Glostrup Sognegård".</span></label>
+    <textarea id="praktisk" name="praktisk" rows="5">{{ a.praktisk }}</textarea>
+
+    <div class="felter-i-raekke">
+      <div>
+        <label for="kategori">Kategori</label>
+        <select id="kategori" name="kategori">
+          {% for k in kategorier %}<option value="{{ k }}" {{ 'selected' if k == a.kategori }}>{{ k|replace('-', ' ') }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label for="by">By</label>
+        <select id="by" name="by">
+          {% for b in by_valg %}<option {{ 'selected' if b == a.by }}>{{ b }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <label for="tags">Tags <span class="hjaelp">Adskilt med komma.</span></label>
+    <input id="tags" name="tags" value="{{ a.tags|join(', ') }}">
+
+    <fieldset>
+      <legend>Arrangement</legend>
+      <label class="valg"><input type="checkbox" name="er_arrangement" value="1" {{ 'checked' if a.er_arrangement }}> Vis i kolonnen "Det sker" på forsiden</label>
+      <label for="arrangement_start">Dato og tid</label>
+      <input id="arrangement_start" name="arrangement_start" type="datetime-local"
+             value="{{ a.arrangement_start.strftime('%Y-%m-%dT%H:%M') if a.arrangement_start else '' }}">
+    </fieldset>
+
+    <label for="usikkerheder">Usikkerheder <span class="hjaelp">Slet et punkt, når du har tjekket det.</span></label>
+    <textarea id="usikkerheder" name="usikkerheder" rows="4">{{ a.usikkerheder }}</textarea>
+
+    <label for="redaktoer_note">Intern note <span class="hjaelp">Vises ikke på hjemmesiden.</span></label>
+    <textarea id="redaktoer_note" name="redaktoer_note" rows="2">{{ a.redaktoer_note }}</textarea>
+
+    {% if p %}
+    <label for="rettelsesnote">Rettelse <span class="hjaelp">Vises øverst i artiklen. Brug den, hvis du retter en fejl i en publiceret artikel.</span></label>
+    <textarea id="rettelsesnote" name="rettelsesnote" rows="2">{{ p.rettelsesnote }}</textarea>
+    {% endif %}
+
+    <div class="knapper">
+      <button class="knap sekundaer" name="handling" value="gem">Gem</button>
+      {% if a.status.value != 'published' %}
+      <button class="knap" name="handling" value="publicer">Gem og publicér</button>
+      {% endif %}
+      {% if a.status.value == 'published' %}
+      <button class="knap advarsel" name="handling" value="afpublicer">Træk tilbage</button>
+      {% endif %}
+      {% if a.status.value != 'rejected' %}
+      <button class="knap advarsel" name="handling" value="afvis">Afvis</button>
+      {% endif %}
+    </div>
+  </form>
+
+  <aside class="sidepanel">
+    <section class="kort">
+      <h2>Status</h2>
+      <p><strong>{{ STATUS_NAVNE[a.status.value] }}</strong> · risiko <span class="risiko {{ a.risiko.value }}">{{ RISIKO_NAVNE[a.risiko.value] }}</span></p>
+      {% if p and a.status.value == 'published' %}
+      <p><a href="{{ url_for('artikel', slug=p.slug) }}">Se artiklen på hjemmesiden →</a></p>
+      {% endif %}
+      <p class="lille-tekst">Oprettet {{ a.oprettet|dato(ugedag=False) }}{% if a.opdateret %}, sidst ændret {{ a.opdateret|dato(ugedag=False) }} {{ a.opdateret|klokken }}{% endif %}.</p>
+    </section>
+
+    <section class="kort {{ 'advarselskort' if a.usikkerheder }}">
+      <h2>Tjek før udgivelse</h2>
+      {% set punkter = a.usikkerheder|linjer %}
+      {% if punkter %}
+        <ul class="tjekliste">{% for u in punkter %}<li>{{ u }}</li>{% endfor %}</ul>
+      {% else %}
+        <p>Robotten har ikke fundet noget, der skal tjekkes.</p>
+      {% endif %}
+    </section>
+
+    <section class="kort">
+      <h2>Kilder</h2>
+      <ul class="kildeliste">{% for k in a.kilder %}<li><a href="{{ k }}" target="_blank" rel="noopener">{{ k|replace('https://', '')|replace('www.', '')|truncate(60) }}</a></li>{% endfor %}</ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}

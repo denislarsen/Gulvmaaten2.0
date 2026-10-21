@@ -2,6 +2,8 @@
 
 Hvert nyt eller ændret RawItem går gennem:
 
+0. Alderstjek  Opslag med en dato mere end MAX_ALDER_DAGE tilbage springes
+               over uden at spørge Claude. Det koster ingenting.
 1. Vurdering   Claude giver en score 0-10 for lokal nyhedsværdi, en kategori,
                et risikoniveau og en kort begrundelse. Gemmes i tabellen
                `assessments`, så vi ikke vurderer det samme to gange.
@@ -10,7 +12,8 @@ Hvert nyt eller ændret RawItem går gennem:
 3. Udkast      Claude skriver overskrift, resumé, brødtekst, praktiske
                detaljer, kilder og en liste over usikkerheder.
 4. Aflevering  Udkastet gemmes som Article med status needs_review.
-               Intet publiceres automatisk.
+               Er autogodkendelse slået til i redaktionsværktøjet, publiceres
+               det med det samme. Ellers venter det på redaktøren.
 
 Reglerne i docs/workflow.md er skrevet direkte ind i systemprompten herunder.
 """
@@ -19,18 +22,21 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import anthropic
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field
 
+from .datoer import dansk_dato, tolk_dato
 from .db import Database
 from .fetch import hent
 from .models import Article, RawItem, ReviewStatus, RiskLevel, Source
+from .publicering import autogodkend, publicer
 
 MODEL = "claude-opus-5-5"
 SCORE_TAERSKEL = 5  # Opslag med lavere score bliver ikke til artikler
+MAX_ALDER_DAGE = 14  # Ældre opslag springes over uden et API-kald
 
 SYSTEM_REDAKTION = """Du er redaktionssekretær på Gulvmåtten, et lokalt netmedie for Glostrup og Brøndby på Københavns Vestegn.
 
@@ -88,6 +94,7 @@ class RedaktionResultat:
     kategori: str
     artikel_id: int | None = None
     sprunget_over: str = ""
+    publiceret: bool = False
 
 
 # --- Hjælpere ----------------------------------------------------------------
@@ -157,8 +164,11 @@ def _item_blok(item: RawItem, source: Source | None, fuld_tekst: str = "") -> st
 
 # --- Trin 1: vurdering --------------------------------------------------------
 
-def vurder(client: anthropic.Anthropic, item: RawItem, source: Source | None) -> Vurdering:
+def vurder(client: anthropic.Anthropic, item: RawItem, source: Source | None,
+           nu: datetime | None = None) -> Vurdering:
     prompt = (
+        f"Dagens dato er {dansk_dato(nu or datetime.now())}. Arrangementer, der allerede har fundet sted, "
+        "og nyheder, der er mere end to uger gamle, får score 0.\n\n"
         "Vurdér dette opslag. Giv en score for lokal nyhedsværdi for borgere i Glostrup og Brøndby, "
         "hvor 0 er irrelevant eller ren rutine (fx en enkelt landzonetilladelse, en kampopstilling, "
         "en selskabsmeddelelse) og 10 er noget, de fleste i byen vil vide. Arrangementer, der er åbne for "
@@ -210,10 +220,18 @@ def skriv_udkast(client: anthropic.Anthropic, item: RawItem, source: Source | No
 
 def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
                  sources: dict[str, Source], taerskel: int = SCORE_TAERSKEL,
-                 hent_tekst=hent_artikeltekst) -> RedaktionResultat:
-    """Kør hele pipelinen for ét opslag. `hent_tekst` kan byttes ud i tests."""
+                 hent_tekst=hent_artikeltekst, nu: datetime | None = None) -> RedaktionResultat:
+    """Kør hele pipelinen for ét opslag. `hent_tekst` og `nu` kan byttes ud i tests."""
+    nu = nu or datetime.now()
     source = sources.get(item.source_id)
-    vurdering = vurder(client, item, source)
+    dato = tolk_dato(item.dato_tekst)
+    if dato and dato < nu - timedelta(days=MAX_ALDER_DAGE):
+        begrundelse = f"For gammelt: dateret {dansk_dato(dato, ugedag=False)}."
+        db.save_assessment(item.id, 0, "", "low", begrundelse)
+        return RedaktionResultat(raw_item_id=item.id, titel=item.titel, score=0, kategori="",
+                                 sprunget_over=begrundelse)
+
+    vurdering = vurder(client, item, source, nu)
     db.save_assessment(item.id, vurdering.score, vurdering.kategori, vurdering.risiko, vurdering.begrundelse)
     resultat = RedaktionResultat(raw_item_id=item.id, titel=item.titel,
                                  score=vurdering.score, kategori=vurdering.kategori)
@@ -225,9 +243,6 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
     relaterede = find_relaterede(db, item)
     udkast = skriv_udkast(client, item, source, fuld_tekst, relaterede, vurdering)
 
-    broedtekst = udkast.broedtekst
-    if udkast.praktisk.strip():
-        broedtekst += "\n\nPraktisk:\n" + udkast.praktisk.strip()
     kilder = list(dict.fromkeys([item.url] + udkast.kilder))
     # Højeste risiko fra vurdering og udkast vinder
     niveauer = [RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH]
@@ -236,7 +251,11 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
     article = Article(
         overskrift=udkast.overskrift,
         resume=udkast.resume,
-        broedtekst=broedtekst,
+        broedtekst=udkast.broedtekst.strip(),
+        praktisk=udkast.praktisk.strip(),
+        er_arrangement=vurdering.er_arrangement,
+        # Datoen tages fra kilden, ikke fra Claude, så den ikke kan blive gættet
+        arrangement_start=dato if vurdering.er_arrangement else None,
         kategori=vurdering.kategori,
         by=vurdering.by if vurdering.by != "Begge" else "Glostrup og Brøndby",
         tags=udkast.tags,
@@ -248,6 +267,9 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
         oprettet=datetime.now(),
     )
     resultat.artikel_id = db.save_article(article)
+    if autogodkend(db):
+        publicer(db, article)
+        resultat.publiceret = True
     return resultat
 
 

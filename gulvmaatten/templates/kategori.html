@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block titel %}{{ navn|replace('-', ' ')|capitalize }} – Gulvmåtten{% endblock %}
+{% block indhold %}
+<section class="kategoriside">
+  <h1 class="sektionstitel">{{ navn|replace('-', ' ')|capitalize }}{% if g.by %} · {{ BYER[g.by] }}{% endif %}</h1>
+  {% for a, p in artikler %}
+    {% with top = False %}{% include "_nyhed.html" %}{% endwith %}
+  {% else %}
+    <p class="tomt">Der er ingen artikler i denne kategori endnu.</p>
+  {% endfor %}
+</section>
+{% endblock %}

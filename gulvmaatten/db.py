@@ -6,13 +6,15 @@ Holder det simpelt: én fil, én tabel pr. datatype. Lister gemmes som JSON.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 
 from .models import Article, Event, Publication, RawItem, ReviewStatus, RiskLevel, Source, SourceType
 
-DEFAULT_DB = Path("data/gulvmaatten.db")
+# På Railway peger GULVMAATTEN_DB på den faste disk, fx /data/gulvmaatten.db
+DEFAULT_DB = Path(os.environ.get("GULVMAATTEN_DB", "data/gulvmaatten.db"))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS sources (
@@ -87,7 +89,10 @@ CREATE TABLE IF NOT EXISTS articles (
     event_id INTEGER REFERENCES events(id),
     oprettet TEXT,
     opdateret TEXT,
-    redaktoer_note TEXT
+    redaktoer_note TEXT,
+    praktisk TEXT,
+    er_arrangement INTEGER DEFAULT 0,
+    arrangement_start TEXT
 );
 
 CREATE TABLE IF NOT EXISTS publications (
@@ -98,7 +103,17 @@ CREATE TABLE IF NOT EXISTS publications (
     rettelsesnote TEXT,
     trukket_tilbage TEXT
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+    noegle TEXT PRIMARY KEY,
+    vaerdi TEXT
+);
 """
+
+# Kolonner tilføjet efter første version. Ældre databaser får dem ved opstart.
+NYE_KOLONNER = {
+    "articles": [("praktisk", "TEXT"), ("er_arrangement", "INTEGER DEFAULT 0"), ("arrangement_start", "TEXT")],
+}
 
 
 def _dt(value: datetime | None) -> str | None:
@@ -114,9 +129,29 @@ class Database:
         self.path = Path(path)
         if str(self.path) != ":memory:":
             self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(str(self.path))
+        # Hjemmesiden og robotten bruger databasen samtidig, så vi venter på
+        # hinanden i stedet for at fejle, og WAL lader læsere arbejde under skrivning.
+        self.conn = sqlite3.connect(str(self.path), timeout=30)
         self.conn.row_factory = sqlite3.Row
+        if str(self.path) != ":memory:":
+            self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.executescript(SCHEMA)
+        self._tilfoej_nye_kolonner()
+
+    def _tilfoej_nye_kolonner(self) -> None:
+        for tabel, kolonner in NYE_KOLONNER.items():
+            findes = {r["name"] for r in self.conn.execute(f"PRAGMA table_info({tabel})")}
+            for navn, type_ in kolonner:
+                if navn not in findes:
+                    self.conn.execute(f"ALTER TABLE {tabel} ADD COLUMN {navn} {type_}")
+        # Før praktisk fik sin egen kolonne, stod den sidst i brødteksten
+        for r in self.conn.execute("SELECT id, broedtekst FROM articles WHERE COALESCE(praktisk, '') = '' "
+                                   "AND broedtekst LIKE '%Praktisk:%'").fetchall():
+            tekst, sep, praktisk = r["broedtekst"].rpartition("\n\nPraktisk:")
+            if sep:
+                self.conn.execute("UPDATE articles SET broedtekst=?, praktisk=? WHERE id=?",
+                                  (tekst.strip(), praktisk.strip(), r["id"]))
+        self.conn.commit()
 
     def close(self) -> None:
         self.conn.close()
@@ -270,21 +305,25 @@ class Database:
         if a.id is None:
             cur = self.conn.execute(
                 """INSERT INTO articles (overskrift, resume, broedtekst, kategori, by, tags, kilder, usikkerheder,
-                   risiko, status, raw_item_ids, event_id, oprettet, opdateret, redaktoer_note)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   risiko, status, raw_item_ids, event_id, oprettet, opdateret, redaktoer_note,
+                   praktisk, er_arrangement, arrangement_start)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (a.overskrift, a.resume, a.broedtekst, a.kategori, a.by, json.dumps(a.tags), json.dumps(a.kilder),
                  a.usikkerheder, a.risiko.value, a.status.value, json.dumps(a.raw_item_ids), a.event_id,
-                 _dt(a.oprettet), _dt(a.opdateret), a.redaktoer_note),
+                 _dt(a.oprettet), _dt(a.opdateret), a.redaktoer_note,
+                 a.praktisk, int(a.er_arrangement), _dt(a.arrangement_start)),
             )
             a.id = cur.lastrowid
         else:
             self.conn.execute(
                 """UPDATE articles SET overskrift=?, resume=?, broedtekst=?, kategori=?, by=?, tags=?, kilder=?,
-                   usikkerheder=?, risiko=?, status=?, raw_item_ids=?, event_id=?, opdateret=?, redaktoer_note=?
+                   usikkerheder=?, risiko=?, status=?, raw_item_ids=?, event_id=?, opdateret=?, redaktoer_note=?,
+                   praktisk=?, er_arrangement=?, arrangement_start=?
                    WHERE id=?""",
                 (a.overskrift, a.resume, a.broedtekst, a.kategori, a.by, json.dumps(a.tags), json.dumps(a.kilder),
                  a.usikkerheder, a.risiko.value, a.status.value, json.dumps(a.raw_item_ids), a.event_id,
-                 _dt(a.opdateret), a.redaktoer_note, a.id),
+                 _dt(a.opdateret), a.redaktoer_note,
+                 a.praktisk, int(a.er_arrangement), _dt(a.arrangement_start), a.id),
             )
         self.conn.commit()
         return a.id
@@ -309,8 +348,48 @@ class Database:
             risiko=RiskLevel(r["risiko"] or "low"), status=ReviewStatus(r["status"] or "new"),
             raw_item_ids=json.loads(r["raw_item_ids"] or "[]"), event_id=r["event_id"],
             oprettet=_parse_dt(r["oprettet"]), opdateret=_parse_dt(r["opdateret"]),
-            redaktoer_note=r["redaktoer_note"] or "",
+            redaktoer_note=r["redaktoer_note"] or "", praktisk=r["praktisk"] or "",
+            er_arrangement=bool(r["er_arrangement"]), arrangement_start=_parse_dt(r["arrangement_start"]),
         )
+
+    def count_articles(self) -> dict[str, int]:
+        """Antal artikler pr. status."""
+        return {r["status"]: r["antal"] for r in
+                self.conn.execute("SELECT status, COUNT(*) AS antal FROM articles GROUP BY status")}
+
+    def get_published(self, by: str | None = None, kategori: str | None = None,
+                      arrangement: bool | None = None, fra: datetime | None = None,
+                      limit: int = 30) -> list[tuple[Article, Publication]]:
+        """Publicerede artikler med deres publicering.
+
+        by:          kun artikler, hvis by-felt nævner byen ("Glostrup og Brøndby" tæller for begge)
+        arrangement: True giver kun arrangementer, sorteret efter dato; False kun nyheder
+        fra:         for arrangementer: skjul dem, der er startet før dette tidspunkt
+        """
+        sql = """SELECT a.*, p.id AS p_id, p.slug, p.publiceret, p.rettelsesnote, p.trukket_tilbage
+                 FROM articles a JOIN publications p ON p.article_id = a.id
+                 WHERE a.status = ? AND p.trukket_tilbage IS NULL"""
+        params: list = [ReviewStatus.PUBLISHED.value]
+        if by:
+            sql += " AND a.by LIKE ?"
+            params.append(f"%{by}%")
+        if kategori:
+            sql += " AND a.kategori = ?"
+            params.append(kategori)
+        if arrangement is not None:
+            sql += " AND COALESCE(a.er_arrangement, 0) = ?"
+            params.append(int(arrangement))
+        if fra and arrangement:
+            sql += " AND (a.arrangement_start IS NULL OR a.arrangement_start >= ?)"
+            params.append(_dt(fra))
+        if arrangement:
+            sql += " ORDER BY a.arrangement_start IS NULL, a.arrangement_start, p.publiceret DESC"
+        else:
+            sql += " ORDER BY p.publiceret DESC"
+        sql += " LIMIT ?"
+        params.append(limit)
+        return [(self._row_to_article(r), self._row_to_publication(r, prefix="p_")) for r in
+                self.conn.execute(sql, params)]
 
     # --- Publications ------------------------------------------------------
 
@@ -322,3 +401,49 @@ class Database:
         p.id = cur.lastrowid
         self.conn.commit()
         return p.id
+
+    def update_publication(self, p: Publication) -> None:
+        self.conn.execute(
+            "UPDATE publications SET slug=?, publiceret=?, rettelsesnote=?, trukket_tilbage=? WHERE id=?",
+            (p.slug, _dt(p.publiceret), p.rettelsesnote, _dt(p.trukket_tilbage), p.id),
+        )
+        self.conn.commit()
+
+    def get_publication(self, article_id: int) -> Publication | None:
+        row = self.conn.execute("SELECT * FROM publications WHERE article_id=? ORDER BY id DESC LIMIT 1",
+                                (article_id,)).fetchone()
+        return self._row_to_publication(row) if row else None
+
+    def get_publication_by_slug(self, slug: str) -> Publication | None:
+        row = self.conn.execute("SELECT * FROM publications WHERE slug=?", (slug,)).fetchone()
+        return self._row_to_publication(row) if row else None
+
+    def slug_findes(self, slug: str) -> bool:
+        return self.conn.execute("SELECT 1 FROM publications WHERE slug=?", (slug,)).fetchone() is not None
+
+    @staticmethod
+    def _row_to_publication(r: sqlite3.Row, prefix: str = "") -> Publication:
+        return Publication(
+            id=r[f"{prefix}id"], article_id=r["article_id"] if not prefix else r["id"], slug=r["slug"],
+            publiceret=_parse_dt(r["publiceret"]), rettelsesnote=r["rettelsesnote"] or "",
+            trukket_tilbage=_parse_dt(r["trukket_tilbage"]),
+        )
+
+    # --- Indstillinger -----------------------------------------------------
+
+    def get_setting(self, noegle: str, standard: str | None = None) -> str | None:
+        row = self.conn.execute("SELECT vaerdi FROM settings WHERE noegle=?", (noegle,)).fetchone()
+        return row["vaerdi"] if row else standard
+
+    def set_setting(self, noegle: str, vaerdi: str) -> None:
+        self.conn.execute("INSERT INTO settings (noegle, vaerdi) VALUES (?, ?) "
+                          "ON CONFLICT(noegle) DO UPDATE SET vaerdi=excluded.vaerdi", (noegle, vaerdi))
+        self.conn.commit()
+
+    def backup(self, maal: Path | str) -> None:
+        """Lav en sikker kopi af hele databasen, også mens den er i brug."""
+        dest = sqlite3.connect(str(maal))
+        try:
+            self.conn.backup(dest)
+        finally:
+            dest.close()

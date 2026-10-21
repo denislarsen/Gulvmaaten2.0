@@ -8,7 +8,7 @@ ROOT = Path(__file__).parent.parent
 def test_settings_kan_laeses():
     s = load_settings(ROOT / "config" / "gulvmaatten.yaml")
     assert [b["navn"] for b in s["byer"]] == ["Glostrup", "Brøndby"]
-    assert s["automatisk_publicering"] is False
+    assert s["automatisk_publicering"] is True
 
 
 def test_kilder_kan_laeses_og_har_unikke_id():

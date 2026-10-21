@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titel %}{{ a.overskrift }} – Gulvmåtten{% endblock %}
+{% block beskrivelse %}{{ a.resume }}{% endblock %}
+{% block indhold %}
+<article class="artikel">
+  <p class="rubrik"><a href="{{ url_for('kategori', navn=a.kategori) }}">{{ a.kategori|replace('-', ' ') }}</a> · {{ a.by }}</p>
+  <h1>{{ a.overskrift }}</h1>
+  <p class="indledning">{{ a.resume }}</p>
+  <p class="meta">Gulvmåtten · {{ p.publiceret|dato|capitalize }}</p>
+
+  {% if p.rettelsesnote %}
+  <aside class="rettelse"><strong>Rettelse:</strong> {{ p.rettelsesnote }}</aside>
+  {% endif %}
+
+  <div class="broedtekst">{{ a.broedtekst|afsnit }}</div>
+
+  {% if a.praktisk %}
+  <aside class="praktisk">
+    <h2>Praktisk</h2>
+    <dl>
+      {% for navn, vaerdi in a.praktisk|praktisk %}
+        {% if navn %}<dt>{{ navn }}</dt><dd>{{ vaerdi }}</dd>{% else %}<dd class="hel">{{ vaerdi }}</dd>{% endif %}
+      {% endfor %}
+    </dl>
+  </aside>
+  {% endif %}
+
+  <footer class="kilder">
+    <h2>Kilder</h2>
+    <ul>{% for k in a.kilder %}<li><a href="{{ k }}" rel="nofollow noopener">{{ k|replace('https://', '')|replace('www.', '')|truncate(70) }}</a></li>{% endfor %}</ul>
+    <p>Artiklen er skrevet ud fra kilderne ovenfor med hjælp fra kunstig intelligens.</p>
+  </footer>
+</article>
+{% endblock %}

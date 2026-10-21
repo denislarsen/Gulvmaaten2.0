@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titel %}Gulvmåtten – lokale nyheder fra Glostrup og Brøndby{% endblock %}</title>
+  <meta name="description" content="{% block beskrivelse %}Lokale nyheder og arrangementer fra Glostrup og Brøndby.{% endblock %}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="datolinje">
+    <div class="bredde">
+      <span>{{ i_dag()|dato|capitalize }}</span>
+      <span class="skjul-mobil">Lokale nyheder fra Glostrup og Brøndby</span>
+    </div>
+  </div>
+  <header class="hoved bredde">
+    <a class="navnetraek" href="{{ url_for('forside') }}">Gulvmåtten</a>
+    <p class="undertitel">Vestegnens lokalavis · Glostrup &amp; Brøndby</p>
+  </header>
+  {% block navigation %}
+  <nav class="navigation" aria-label="Vælg by">
+    <div class="bredde">
+      <ul class="byvalg">
+        <li><a href="{{ request.path }}?by=" class="{{ 'valgt' if not g.by }}">Begge byer</a></li>
+        {% for noegle, navn in BYER.items() %}
+        <li><a href="{{ request.path }}?by={{ noegle }}" class="{{ 'valgt' if g.by == noegle }}">{{ navn }}</a></li>
+        {% endfor %}
+      </ul>
+      <ul class="kategorier">
+        {% for k in kategorier %}
+        <li><a href="{{ url_for('kategori', navn=k) }}">{{ k|replace('-', ' ')|capitalize }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </nav>
+  {% endblock %}
+  <main class="bredde">
+    {% with beskeder = get_flashed_messages() %}
+      {% for b in beskeder %}<p class="besked">{{ b }}</p>{% endfor %}
+    {% endwith %}
+    {% block indhold %}{% endblock %}
+  </main>
+  <footer class="fod">
+    <div class="bredde">
+      <p><strong>Gulvmåtten</strong> er et lokalt netmedie for Glostrup og Brøndby.</p>
+      <p>Artiklerne skrives ud fra offentlige kilder som kommunerne, bibliotekerne og de lokale foreninger, med hjælp fra kunstig intelligens. Hver artikel viser, hvilke kilder den bygger på. Finder du en fejl, retter vi den med en synlig rettelse.</p>
+    </div>
+  </footer>
+</body>
+</html>

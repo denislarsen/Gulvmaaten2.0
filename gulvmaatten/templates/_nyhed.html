@@ -1,0 +1,6 @@
+<article class="nyhed{{ ' tophistorie' if top }}">
+  <p class="rubrik">{{ a.kategori|replace('-', ' ') }} · {{ a.by }}</p>
+  <h2><a href="{{ url_for('artikel', slug=p.slug) }}">{{ a.overskrift }}</a></h2>
+  <p class="resume">{{ a.resume }}</p>
+  <p class="meta">{{ p.publiceret|dato(ugedag=False) }}</p>
+</article>

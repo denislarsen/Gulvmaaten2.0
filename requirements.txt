@@ -6,3 +6,5 @@ pytest>=8.0
 lxml>=5.0
 anthropic>=1.0
 pydantic>=2.0
+flask>=3.0
+waitress>=3.0

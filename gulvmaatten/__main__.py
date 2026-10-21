@@ -11,6 +11,8 @@
     python -m gulvmaatten udkast          Vis artikeludkast, der afventer redaktør
     python -m gulvmaatten vis 3           Vis artikel nr. 3 i fuld længde
     python -m gulvmaatten vurderinger     Vis de seneste vurderinger
+    python -m gulvmaatten serve           Start hjemmesiden og robotten (http://localhost:8000)
+    python -m gulvmaatten serve --uden-robot   Kun hjemmesiden
 """
 
 from __future__ import annotations
@@ -80,7 +82,8 @@ def cmd_redaktion(db: Database, args) -> None:
         return
     for r in resultater:
         if r.artikel_id:
-            print(f"[{r.score:2}] {r.titel}\n     -> udkast #{r.artikel_id} ({r.kategori}), afventer redaktør")
+            hvor = "publiceret" if r.publiceret else "afventer redaktør"
+            print(f"[{r.score:2}] {r.titel}\n     -> udkast #{r.artikel_id} ({r.kategori}), {hvor}")
         else:
             print(f"[{r.score:2}] {r.titel}\n     -> sprunget over: {r.sprunget_over}")
     antal = sum(1 for r in resultater if r.artikel_id)
@@ -110,8 +113,10 @@ def cmd_vis(db: Database, args) -> None:
     print(f"tags: {', '.join(a.tags)}\n")
     print(a.resume + "\n")
     print(a.broedtekst + "\n")
+    if a.praktisk:
+        print("Praktisk:\n" + a.praktisk + "\n")
     if a.usikkerheder:
-        print(f"USIKKERHEDER: {a.usikkerheder}\n")
+        print(f"USIKKERHEDER:\n{a.usikkerheder}\n")
     print("Kilder:")
     for k in a.kilder:
         print(f"  {k}")
@@ -124,6 +129,25 @@ def cmd_vurderinger(db: Database, args) -> None:
         return
     for r in rows:
         print(f"[{r['score']:2}] {r['kategori']:22} {r['risiko']:6} {r['titel']}\n     {r['begrundelse']}")
+
+
+def cmd_serve(db: Database, args) -> None:
+    import logging
+
+    from waitress import serve
+
+    from . import robot
+    from .web import create_app
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s: %(message)s")
+    cmd_init(db, args)
+    if args.uden_robot:
+        print("Robotten er slået fra.")
+    else:
+        robot.start(db.path)
+        print(f"Robotten kører hver {robot.INTERVAL_MINUTTER}. minut.")
+    print(f"Hjemmesiden kører på http://localhost:{args.port}")
+    serve(create_app(db.path), host=args.host, port=args.port, threads=8)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -156,6 +180,12 @@ def main(argv: list[str] | None = None) -> None:
     vu = sub.add_parser("vurderinger")
     vu.add_argument("--limit", type=int, default=30)
     vu.set_defaults(fn=cmd_vurderinger)
+
+    se = sub.add_parser("serve")
+    se.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
+    se.add_argument("--host", default="0.0.0.0")
+    se.add_argument("--uden-robot", action="store_true", help="Start kun hjemmesiden")
+    se.set_defaults(fn=cmd_serve)
 
     args = p.parse_args(argv)
     db = Database(args.db)

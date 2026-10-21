@@ -129,6 +129,9 @@ class Article:
     tags: list[str] = field(default_factory=list)
     kilder: list[str] = field(default_factory=list)  # URL'er artiklen bygger på
     usikkerheder: str = ""        # Hvad agenten ikke kunne bekræfte
+    praktisk: str = ""            # Hvornår, hvor, pris, tilmelding. Ét punkt pr. linje
+    er_arrangement: bool = False  # Vises i arrangementskolonnen på forsiden
+    arrangement_start: datetime | None = None
     risiko: RiskLevel = RiskLevel.LOW
     status: ReviewStatus = ReviewStatus.NEW
     raw_item_ids: list[int] = field(default_factory=list)
