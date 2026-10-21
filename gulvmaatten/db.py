@@ -46,6 +46,17 @@ CREATE TABLE IF NOT EXISTS raw_items (
     UNIQUE(source_id, url)
 );
 
+CREATE TABLE IF NOT EXISTS assessments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    raw_item_id INTEGER NOT NULL REFERENCES raw_items(id),
+    content_hash TEXT NOT NULL,
+    score INTEGER,
+    kategori TEXT,
+    risiko TEXT,
+    begrundelse TEXT,
+    tidspunkt TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     titel TEXT NOT NULL,
@@ -200,6 +211,37 @@ class Database:
             content_hash=r["content_hash"],
         )
 
+    # --- Assessments (vurderinger) ------------------------------------------
+
+    def save_assessment(self, raw_item_id: int, score: int, kategori: str, risiko: str, begrundelse: str) -> None:
+        row = self.conn.execute("SELECT content_hash FROM raw_items WHERE id=?", (raw_item_id,)).fetchone()
+        self.conn.execute(
+            "INSERT INTO assessments (raw_item_id, content_hash, score, kategori, risiko, begrundelse, tidspunkt) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (raw_item_id, row["content_hash"] if row else "", score, kategori, risiko, begrundelse,
+             _dt(datetime.now())),
+        )
+        self.conn.commit()
+
+    def get_unassessed_raw_items(self, limit: int = 10, source_id: str | None = None) -> list[RawItem]:
+        """Opslag uden vurdering af deres nuværende indhold. Et opslag, der er
+        ændret siden sidste vurdering, kommer med igen."""
+        sql = """SELECT r.* FROM raw_items r
+                 WHERE NOT EXISTS (SELECT 1 FROM assessments a
+                                   WHERE a.raw_item_id = r.id AND a.content_hash = r.content_hash)"""
+        params: list = []
+        if source_id:
+            sql += " AND r.source_id = ?"
+            params.append(source_id)
+        sql += " ORDER BY r.fundet DESC, r.id DESC LIMIT ?"
+        params.append(limit)
+        return [self._row_to_raw(r) for r in self.conn.execute(sql, params)]
+
+    def get_assessments(self, limit: int = 50) -> list[sqlite3.Row]:
+        return list(self.conn.execute(
+            """SELECT a.*, r.titel, r.source_id FROM assessments a JOIN raw_items r ON r.id = a.raw_item_id
+               ORDER BY a.tidspunkt DESC LIMIT ?""", (limit,)))
+
     # --- Events ------------------------------------------------------------
 
     def save_event(self, e: Event) -> int:
@@ -246,6 +288,10 @@ class Database:
             )
         self.conn.commit()
         return a.id
+
+    def get_article(self, article_id: int) -> Article | None:
+        row = self.conn.execute("SELECT * FROM articles WHERE id=?", (article_id,)).fetchone()
+        return self._row_to_article(row) if row else None
 
     def get_articles(self, status: ReviewStatus | None = None) -> list[Article]:
         if status:
