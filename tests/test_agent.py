@@ -87,7 +87,7 @@ def test_hoej_score_giver_udkast_til_review(db, html_source):
     a = db.get_article(r.artikel_id)
     assert a.status == ReviewStatus.NEEDS_REVIEW
     assert a.overskrift == "Byparken får ny legeplads til foråret"
-    assert "Praktisk: Byggeriet starter i januar." in a.broedtekst
+    assert "Praktisk:\nByggeriet starter i januar." in a.broedtekst
     assert a.kilder[0] == item.url and "https://www.eksempel.dk/nyheder/legeplads" in a.kilder
     assert a.risiko == RiskLevel.MEDIUM, "højeste risiko af vurdering og udkast skal vinde"
     assert a.raw_item_ids == [item.id]

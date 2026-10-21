@@ -42,6 +42,13 @@ Mediets regler, som du altid overholder:
 5. Ingen private persondata. Kun navne, der optræder i en offentlig kilde med redaktionel relevans, fx en borgmester, en forfatter eller en foredragsholder.
 6. Sproget er dansk, neutralt, præcist og letlæst. Korte sætninger. Ingen reklamesprog, ingen udråbstegn, ingen vurderende tillægsord.
 
+Sådan skriver du et udkast:
+7. Udkastet må aldrig modsige sin egen usikkerhedsliste. Står en oplysning som usikker, må artiklen ikke fremstille den som sikker. Læs udkastet igennem til sidst og ret det, hvis artikel og usikkerheder ikke passer sammen.
+8. Usikre oplysninger udelader du helst. Er oplysningen vigtig for læseren, skriver du den forsigtigt og tydeligt med kilde, fx "Ifølge biblioteket ..." eller "Biblioteket oplyser ikke, hvornår ...". Gæt aldrig.
+9. Resuméet er artiklens indledning. Brødtekstens første afsnit må ikke gentage resuméet, hverken ordret eller med andre ord. Brødteksten fortsætter, hvor resuméet slap, med nye oplysninger.
+10. Praktiske oplysninger skrives med ét punkt pr. linje, fx "Hvornår: ...", "Hvor: ...", "Pris: ...", "Tilmelding: ...". Aldrig flere punkter på samme linje.
+11. Usikkerhedslisten er en tjekliste til redaktøren. Den indeholder kun det, redaktøren skal undersøge eller tage stilling til, før artiklen kan udgives. Ét punkt pr. linje, hvert punkt indledt med "- ". Skriv ikke ting, der er i orden, ting du har bekræftet, eller forklaringer på, hvad du har udeladt af sproglige grunde.
+
 Kategorier: arrangementer, kommune, kultur, sport, foreningsliv, byudvikling, skole-og-institution, trafik.
 """
 
@@ -61,12 +68,15 @@ class Udkast(BaseModel):
     """Claudes artikeludkast."""
 
     overskrift: str
-    resume: str = Field(description="1-2 sætninger")
-    broedtekst: str = Field(description="3-6 sætninger, almindelig tekst, afsnit adskilt med tom linje")
-    praktisk: str = Field(description="Hvornår, hvor, pris, tilmelding. Tom streng hvis ikke relevant")
+    resume: str = Field(description="Indledningen: 1-2 sætninger")
+    broedtekst: str = Field(description="3-6 sætninger, almindelig tekst, afsnit adskilt med tom linje. "
+                                        "Første afsnit må ikke gentage resuméet")
+    praktisk: str = Field(description="Hvornår, hvor, pris, tilmelding. Ét punkt pr. linje, adskilt med linjeskift. "
+                                      "Tom streng hvis ikke relevant")
     tags: list[str]
     kilder: list[str] = Field(description="URL'er artiklen bygger på")
-    usikkerheder: str = Field(description="Hvad der ikke kunne bekræftes. Tom streng hvis intet")
+    usikkerheder: str = Field(description="Kun det redaktøren skal tjekke, ét punkt pr. linje indledt med '- '. "
+                                          "Må ikke modsiges af artiklen. Tom streng hvis intet")
     risiko: str = Field(description="low, medium eller high")
 
 
@@ -217,7 +227,7 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
 
     broedtekst = udkast.broedtekst
     if udkast.praktisk.strip():
-        broedtekst += "\n\nPraktisk: " + udkast.praktisk.strip()
+        broedtekst += "\n\nPraktisk:\n" + udkast.praktisk.strip()
     kilder = list(dict.fromkeys([item.url] + udkast.kilder))
     # Højeste risiko fra vurdering og udkast vinder
     niveauer = [RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH]
