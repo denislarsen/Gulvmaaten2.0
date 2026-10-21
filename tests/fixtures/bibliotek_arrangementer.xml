@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>Eksempel Bibliotek - Arrangementer</title>
+  <link>https://eksempelbib.dk/arrangementer</link>
+  <item>
+    <title>Foredrag: Vestegnens historie</title>
+    <link>https://eksempelbib.dk/arrangementer/vestegnens-historie</link>
+    <pubDate>Mon, 20 Oct 2026 09:00:00 +0200</pubDate>
+    <description><![CDATA[<p>Historiker Anne Jensen fortæller. Torsdag den 6. november kl. 19.00. Gratis, men tilmelding nødvendig.</p>]]></description>
+  </item>
+  <item>
+    <title>Strikkecafé for alle</title>
+    <link>https://eksempelbib.dk/arrangementer/strikkecafe</link>
+    <pubDate>Sun, 19 Oct 2026 12:00:00 +0200</pubDate>
+    <description>Hver onsdag kl. 15-17. Tag dit eget strikketøj med.</description>
+  </item>
+</channel>
+</rss>

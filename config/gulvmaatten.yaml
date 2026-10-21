@@ -1,0 +1,51 @@
+# Grundkonfiguration for Gulvmåtten 2.0
+
+byer:
+  - navn: Glostrup
+    kommune: Glostrup Kommune
+    postnumre: [2600]
+  - navn: Brøndby
+    kommune: Brøndby Kommune
+    postnumre: [2605, 2660, 2650]
+
+# Ord, der øger sandsynligheden for lokal relevans.
+# Bruges i filtrering og prioritering.
+noegleord:
+  - Glostrup
+  - Brøndby
+  - Brøndbyvester
+  - Brøndbyøster
+  - Brøndby Strand
+  - Hvissinge
+  - Vestegnen
+  - byråd
+  - kommunalbestyrelse
+  - høring
+  - arrangement
+  - koncert
+  - foredrag
+  - loppemarked
+  - generalforsamling
+  - vejarbejde
+
+# Kategorier en artikel kan tildeles.
+kategorier:
+  - arrangementer
+  - kommune
+  - kultur
+  - sport
+  - foreningsliv
+  - byudvikling
+  - skole-og-institution
+  - trafik
+
+# Emner, der altid kræver menneskelig godkendelse uanset kvalitetsscore.
+hoej_risiko:
+  - politik
+  - kriminalitet
+  - sundhed
+  - navngivne-personer
+  - kontroversielt
+
+# Automatisk publicering er slået fra i første fase.
+automatisk_publicering: false

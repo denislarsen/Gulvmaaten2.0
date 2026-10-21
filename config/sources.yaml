@@ -1,0 +1,110 @@
+# Kildeprofiler for Gulvmåtten 2.0
+#
+# Hver kilde har:
+#   id          Kort unikt navn
+#   navn        Visningsnavn
+#   url         Adressen der hentes
+#   type        rss eller html
+#   kategori    Hvilken slags kilde (kommune, bibliotek, sport, forening, kirke, medie ...)
+#   by          Glostrup eller Brøndby
+#   tillid      1-5, hvor 5 er en officiel kilde man kan stole fuldt på
+#   frekvens    Hvor ofte kilden bør hentes, i timer
+#   sprog       da
+#   verificeret true når kilden er testet mod den rigtige hjemmeside
+#   html        Kun for type html: CSS-selektorer, der udpeger opslag på siden
+#   regler      Fritekst om særlige hensyn
+#
+# Kilder med verificeret: false er sat op ud fra bedste viden om hjemmesiden,
+# men er endnu ikke testet live. Første fetch mod den rigtige side afgør,
+# om selektorerne skal justeres.
+
+kilder:
+  - id: glostrup-kommune-nyheder
+    navn: Glostrup Kommune, nyheder
+    url: https://www.glostrup.dk/nyheder
+    type: html
+    kategori: kommune
+    by: Glostrup
+    tillid: 5
+    frekvens: 6
+    sprog: da
+    verificeret: false
+    html:
+      opslag: "article, .news-item, .list-item"
+      titel: "h2, h3, .title"
+      link: "a"
+      dato: "time, .date"
+      resume: "p, .teaser"
+    regler: Officiel kilde. Pressemeddelelser kan citeres med kildeangivelse.
+
+  - id: brondby-kommune-nyheder
+    navn: Brøndby Kommune, nyheder
+    url: https://www.brondby.dk/nyheder
+    type: html
+    kategori: kommune
+    by: Brøndby
+    tillid: 5
+    frekvens: 6
+    sprog: da
+    verificeret: false
+    html:
+      opslag: "article, .news-item, .list-item"
+      titel: "h2, h3, .title"
+      link: "a"
+      dato: "time, .date"
+      resume: "p, .teaser"
+    regler: Officiel kilde. Pressemeddelelser kan citeres med kildeangivelse.
+
+  - id: glostrup-bibliotek-arrangementer
+    navn: Glostrup Bibliotek, arrangementer
+    url: https://glostrupbib.dk/arrangementer
+    type: html
+    kategori: bibliotek
+    by: Glostrup
+    tillid: 4
+    frekvens: 24
+    sprog: da
+    verificeret: false
+    html:
+      opslag: "article, .event, .list-item"
+      titel: "h2, h3, .title"
+      link: "a"
+      dato: "time, .date"
+      resume: "p, .teaser"
+    regler: Tjek altid dato, tid, pris og tilmelding mod kildens egen side.
+
+  - id: brondby-bibliotek-arrangementer
+    navn: Brøndby Bibliotekerne, arrangementer
+    url: https://www.brondbybib.dk/arrangementer
+    type: html
+    kategori: bibliotek
+    by: Brøndby
+    tillid: 4
+    frekvens: 24
+    sprog: da
+    verificeret: false
+    html:
+      opslag: "article, .event, .list-item"
+      titel: "h2, h3, .title"
+      link: "a"
+      dato: "time, .date"
+      resume: "p, .teaser"
+    regler: Tjek altid dato, tid, pris og tilmelding mod kildens egen side.
+
+  - id: brondby-if-nyheder
+    navn: Brøndby IF, nyheder
+    url: https://brondby.com/nyheder
+    type: html
+    kategori: sport
+    by: Brøndby
+    tillid: 4
+    frekvens: 12
+    sprog: da
+    verificeret: false
+    html:
+      opslag: "article, .news-item, .list-item"
+      titel: "h2, h3, .title"
+      link: "a"
+      dato: "time, .date"
+      resume: "p, .teaser"
+    regler: Kommerciel klub. Brug kun nyheder med lokal betydning, ikke rene salgsopslag.
