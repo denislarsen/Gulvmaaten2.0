@@ -6,7 +6,7 @@
     python -m gulvmaatten fetch --source glostrup-kommune-nyheder
     python -m gulvmaatten list            Vis de seneste opslag
     python -m gulvmaatten sources         Vis kilderne og hvornår de sidst er hentet
-    python -m gulvmaatten redaktion       Vurdér nye opslag og skriv udkast (kræver ANTHROPIC_API_KEY)
+    python -m gulvmaatten redaktion       Vurdér nye opslag og skriv udkast (kræver GULVMAATTEN_API_KEY)
     python -m gulvmaatten redaktion --limit 5 --source glostrup-kommune-nyheder
     python -m gulvmaatten udkast          Vis artikeludkast, der afventer redaktør
     python -m gulvmaatten vis 3           Vis artikel nr. 3 i fuld længde
@@ -65,13 +65,15 @@ def cmd_sources(db: Database, args) -> None:
 
 
 def cmd_redaktion(db: Database, args) -> None:
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        sys.exit("ANTHROPIC_API_KEY er ikke sat. Sæt den i miljøets indstillinger (Environment variables).")
+    # Claude Codes skymiljø fjerner ANTHROPIC_API_KEY, så GULVMAATTEN_API_KEY bruges som alternativ.
+    api_key = os.environ.get("GULVMAATTEN_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        sys.exit("Ingen API-nøgle. Sæt GULVMAATTEN_API_KEY i miljøets indstillinger (Environment variables).")
     import anthropic
 
     from .agent import koer_redaktion
 
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(api_key=api_key)
     resultater = koer_redaktion(db, client, limit=args.limit, taerskel=args.taerskel, source_id=args.source)
     if not resultater:
         print("Ingen nye opslag at vurdere.")
