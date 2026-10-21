@@ -24,6 +24,7 @@ from enum import Enum
 class SourceType(str, Enum):
     RSS = "rss"
     HTML = "html"
+    SITEMAP = "sitemap"  # Hjemmesidens sitemap.xml, til sider hvor listen laves med JavaScript
 
 
 class ReviewStatus(str, Enum):
@@ -56,6 +57,7 @@ class Source:
     sprog: str = "da"
     verificeret: bool = False
     html: dict = field(default_factory=dict)
+    sitemap: dict = field(default_factory=dict)
     regler: str = ""
     aktiv: bool = True
     sidst_hentet: datetime | None = None
@@ -74,6 +76,7 @@ class Source:
             sprog=d.get("sprog", "da"),
             verificeret=bool(d.get("verificeret", False)),
             html=d.get("html") or {},
+            sitemap=d.get("sitemap") or {},
             regler=d.get("regler", ""),
         )
 

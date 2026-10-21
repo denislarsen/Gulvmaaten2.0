@@ -4,92 +4,92 @@
 #   id          Kort unikt navn
 #   navn        Visningsnavn
 #   url         Adressen der hentes
-#   type        rss eller html
+#   type        rss, html eller sitemap
 #   kategori    Hvilken slags kilde (kommune, bibliotek, sport, forening, kirke, medie ...)
 #   by          Glostrup eller Brøndby
 #   tillid      1-5, hvor 5 er en officiel kilde man kan stole fuldt på
 #   frekvens    Hvor ofte kilden bør hentes, i timer
 #   sprog       da
 #   verificeret true når kilden er testet mod den rigtige hjemmeside
-#   html        Kun for type html: CSS-selektorer, der udpeger opslag på siden
+#   html        CSS-selektorer, der udpeger opslag (type html) eller felter på
+#               artikelsiden (type sitemap)
+#   sitemap     Kun for type sitemap: prefix (kun URL'er der starter sådan) og
+#               max (højst så mange, nyeste først)
 #   regler      Fritekst om særlige hensyn
 #
-# Kilder med verificeret: false er sat op ud fra bedste viden om hjemmesiden,
-# men er endnu ikke testet live. Første fetch mod den rigtige side afgør,
-# om selektorerne skal justeres.
+# Alle fem kilder er verificeret mod de rigtige hjemmesider den 21. oktober 2026.
 
 kilder:
   - id: glostrup-kommune-nyheder
     navn: Glostrup Kommune, nyheder
-    url: https://www.glostrup.dk/nyheder
-    type: html
+    url: https://www.glostrup.dk/sitemap.xml
+    type: sitemap
     kategori: kommune
     by: Glostrup
     tillid: 5
     frekvens: 6
     sprog: da
-    verificeret: false
+    verificeret: true
+    sitemap:
+      prefix: https://www.glostrup.dk/nyheder/
+      max: 20
     html:
-      opslag: "article, .news-item, .list-item"
-      titel: "h2, h3, .title"
-      link: "a"
-      dato: "time, .date"
-      resume: "p, .teaser"
-    regler: Officiel kilde. Pressemeddelelser kan citeres med kildeangivelse.
+      titel: h1
+    regler: >
+      Officiel kilde. Nyhedslisten på glostrup.dk/nyheder laves med JavaScript,
+      derfor bruges sitemappet. Resumé kommer fra sidens meta description.
 
   - id: brondby-kommune-nyheder
     navn: Brøndby Kommune, nyheder
-    url: https://www.brondby.dk/nyheder
-    type: html
+    url: https://www.brondby.dk/om-kommunen/nyheder/rss
+    type: rss
     kategori: kommune
     by: Brøndby
     tillid: 5
     frekvens: 6
     sprog: da
-    verificeret: false
-    html:
-      opslag: "article, .news-item, .list-item"
-      titel: "h2, h3, .title"
-      link: "a"
-      dato: "time, .date"
-      resume: "p, .teaser"
-    regler: Officiel kilde. Pressemeddelelser kan citeres med kildeangivelse.
+    verificeret: true
+    regler: >
+      Officiel kilde med RSS-feed. Indeholder også rutinemeddelelser som
+      landzonetilladelser, der sjældent har nyhedsværdi.
 
   - id: glostrup-bibliotek-arrangementer
     navn: Glostrup Bibliotek, arrangementer
-    url: https://glostrupbib.dk/arrangementer
+    url: https://www.glostrupbib.dk/arrangementer
     type: html
     kategori: bibliotek
     by: Glostrup
     tillid: 4
     frekvens: 24
     sprog: da
-    verificeret: false
+    verificeret: true
     html:
-      opslag: "article, .event, .list-item"
-      titel: "h2, h3, .title"
-      link: "a"
-      dato: "time, .date"
-      resume: "p, .teaser"
+      opslag: li.content-list__item
+      titel: h2.content-list-item__title
+      link: a
+      dato: time
+      resume: .content-list-item__description
     regler: Tjek altid dato, tid, pris og tilmelding mod kildens egen side.
 
   - id: brondby-bibliotek-arrangementer
     navn: Brøndby Bibliotekerne, arrangementer
-    url: https://www.brondbybib.dk/arrangementer
+    url: https://www.brondby-bibliotekerne.dk/arrangementer
     type: html
     kategori: bibliotek
     by: Brøndby
     tillid: 4
     frekvens: 24
     sprog: da
-    verificeret: false
+    verificeret: true
     html:
-      opslag: "article, .event, .list-item"
-      titel: "h2, h3, .title"
-      link: "a"
-      dato: "time, .date"
-      resume: "p, .teaser"
-    regler: Tjek altid dato, tid, pris og tilmelding mod kildens egen side.
+      opslag: li.content-list__item
+      titel: h2.content-list-item__title
+      link: a
+      dato: time
+      resume: .content-list-item__description
+    regler: >
+      Samme system som Glostrup Bibliotek. Dækker Biblioteket i Brønden og
+      Biblioteket i Kilden. Tjek altid dato, tid, pris og tilmelding mod kildens egen side.
 
   - id: brondby-if-nyheder
     navn: Brøndby IF, nyheder
@@ -100,11 +100,11 @@ kilder:
     tillid: 4
     frekvens: 12
     sprog: da
-    verificeret: false
+    verificeret: true
     html:
-      opslag: "article, .news-item, .list-item"
-      titel: "h2, h3, .title"
-      link: "a"
-      dato: "time, .date"
-      resume: "p, .teaser"
-    regler: Kommerciel klub. Brug kun nyheder med lokal betydning, ikke rene salgsopslag.
+      opslag: 'a[href*="/nyheder/"]'
+      titel: h2
+      dato: time
+    regler: >
+      Kommerciel klub. Brug kun nyheder med lokal betydning, ikke rene salgsopslag
+      eller selskabsmeddelelser. Siden viser kun de seneste ca. 8 nyheder.

@@ -15,11 +15,12 @@ En hjemmeside eller et feed vi overvåger. Kommer fra `config/sources.yaml`.
 | Felt | Betydning |
 |---|---|
 | id | Kort unikt navn, fx `glostrup-kommune-nyheder` |
-| type | `rss` eller `html` |
+| type | `rss`, `html` eller `sitemap` |
 | tillid | 1–5. Officielle kilder er 5. Bruges i research-trinnet |
 | frekvens_timer | Hvor ofte kilden bør hentes |
 | verificeret | Om kildeprofilen er testet mod den rigtige side |
 | html | CSS-selektorer, der udpeger opslag på en HTML-side |
+| sitemap | For `sitemap`-kilder: `prefix` (kun URL'er der starter sådan) og `max` |
 | sidst_hentet | Sættes af crawleren |
 
 ## RawItem (råt opslag)

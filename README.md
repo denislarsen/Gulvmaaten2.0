@@ -15,8 +15,10 @@ Første fase. Det, der virker nu:
 
 - Konfiguration af byer, nøgleord og kildeprofiler (`config/`)
 - Datamodel og SQLite-database (`gulvmaatten/models.py`, `gulvmaatten/db.py`)
-- Crawler, der henter RSS-feeds og HTML-sider og registrerer nye og ændrede
-  opslag (`gulvmaatten/fetch.py`)
+- Crawler, der henter RSS-feeds, HTML-sider og sitemaps og registrerer nye og
+  ændrede opslag (`gulvmaatten/fetch.py`)
+- Fem kilder verificeret mod de rigtige hjemmesider: Glostrup og Brøndby
+  kommunes nyheder, begge bibliotekers arrangementer og Brøndby IF
 - Testdata og automatiske tests (`tests/`)
 
 Det, der kommer senere, i den rækkefølge:
@@ -57,7 +59,7 @@ config/
 gulvmaatten/
   models.py          Datamodel: Source, RawItem, Event, Article, ReviewStatus, Publication
   db.py              SQLite-lager
-  fetch.py           Crawler for RSS og HTML
+  fetch.py           Crawler for RSS, HTML og sitemap
   __main__.py        Kommandolinje: init, fetch, list
 docs/
   datamodel.md       Forklaring af datamodellen

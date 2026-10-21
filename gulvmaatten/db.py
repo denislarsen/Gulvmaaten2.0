@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS sources (
     sprog TEXT,
     verificeret INTEGER,
     html TEXT,
+    sitemap TEXT,
     regler TEXT,
     aktiv INTEGER DEFAULT 1,
     sidst_hentet TEXT
@@ -114,15 +115,15 @@ class Database:
     def upsert_source(self, s: Source) -> None:
         self.conn.execute(
             """INSERT INTO sources
-               (id, navn, url, type, kategori, by, tillid, frekvens_timer, sprog, verificeret, html, regler, aktiv)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+               (id, navn, url, type, kategori, by, tillid, frekvens_timer, sprog, verificeret, html, sitemap, regler, aktiv)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT(id) DO UPDATE SET
                  navn=excluded.navn, url=excluded.url, type=excluded.type, kategori=excluded.kategori,
                  by=excluded.by, tillid=excluded.tillid, frekvens_timer=excluded.frekvens_timer,
                  sprog=excluded.sprog, verificeret=excluded.verificeret, html=excluded.html,
-                 regler=excluded.regler, aktiv=excluded.aktiv""",
+                 sitemap=excluded.sitemap, regler=excluded.regler, aktiv=excluded.aktiv""",
             (s.id, s.navn, s.url, s.type.value, s.kategori, s.by, s.tillid, s.frekvens_timer,
-             s.sprog, int(s.verificeret), json.dumps(s.html), s.regler, int(s.aktiv)),
+             s.sprog, int(s.verificeret), json.dumps(s.html), json.dumps(s.sitemap), s.regler, int(s.aktiv)),
         )
         self.conn.commit()
 
@@ -142,6 +143,7 @@ class Database:
             kategori=r["kategori"] or "", by=r["by"] or "", tillid=r["tillid"] or 3,
             frekvens_timer=r["frekvens_timer"] or 24, sprog=r["sprog"] or "da",
             verificeret=bool(r["verificeret"]), html=json.loads(r["html"] or "{}"),
+            sitemap=json.loads(r["sitemap"] or "{}"),
             regler=r["regler"] or "", aktiv=bool(r["aktiv"]),
             sidst_hentet=_parse_dt(r["sidst_hentet"]),
         )
@@ -175,6 +177,11 @@ class Database:
         self.conn.execute("UPDATE raw_items SET sidst_set=? WHERE id=?", (now, item.id))
         self.conn.commit()
         return "uaendret"
+
+    def get_raw_item(self, source_id: str, url: str) -> RawItem | None:
+        row = self.conn.execute(
+            "SELECT * FROM raw_items WHERE source_id=? AND url=?", (source_id, url)).fetchone()
+        return self._row_to_raw(row) if row else None
 
     def get_raw_items(self, source_id: str | None = None, limit: int = 100) -> list[RawItem]:
         if source_id:

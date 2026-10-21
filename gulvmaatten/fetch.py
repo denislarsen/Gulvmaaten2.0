@@ -1,17 +1,21 @@
 """Crawler: henter kilder og registrerer nye og ændrede opslag.
 
-To slags kilder:
-- rss   Et feed, som parses med feedparser. Mest pålideligt.
-- html  En almindelig side. Opslag udpeges med CSS-selektorer fra kildeprofilen.
+Tre slags kilder:
+- rss      Et feed, som parses med feedparser. Mest pålideligt.
+- html     En almindelig side. Opslag udpeges med CSS-selektorer fra kildeprofilen.
+- sitemap  Hjemmesidens sitemap.xml. Bruges når nyhedslisten laves med JavaScript
+           og derfor er tom i det, vi henter. Sitemappet giver URL og ændringsdato;
+           titel og resumé hentes fra hver enkelt artikelside.
 
-Selve hentningen (`hent`) er adskilt fra fortolkningen (`parse_rss`, `parse_html`),
-så fortolkningen kan testes på gemte filer uden internet.
+Selve hentningen (`hent`) er adskilt fra fortolkningen (`parse_rss`, `parse_html`,
+`parse_sitemap`), så fortolkningen kan testes på gemte filer uden internet.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Callable
 from urllib.parse import urljoin
 
 import feedparser
@@ -23,6 +27,9 @@ from .models import RawItem, Source, SourceType
 
 USER_AGENT = "Gulvmaatten/0.1 (lokalt bymedie; kontakt via GitHub denislarsen/gulvmaaten2.0)"
 TIMEOUT = 20.0
+SITEMAP_MAX_DEFAULT = 20
+
+Fetcher = Callable[[str], str]
 
 
 @dataclass
@@ -48,6 +55,8 @@ def hent(url: str) -> str:
         return r.text
 
 
+# --- RSS ---------------------------------------------------------------------
+
 def parse_rss(source: Source, content: str) -> list[RawItem]:
     feed = feedparser.parse(content)
     items = []
@@ -63,11 +72,24 @@ def parse_rss(source: Source, content: str) -> list[RawItem]:
     return items
 
 
+# --- HTML --------------------------------------------------------------------
+
 def _first_text(node, selector: str) -> str:
     if not selector:
         return ""
     found = node.select_one(selector)
     return found.get_text(" ", strip=True) if found else ""
+
+
+def _all_text(node, selector: str) -> str:
+    """Som _first_text, men samler alle matchende elementer. Bruges til datoer,
+    der ofte står i flere <time>-elementer (dato og klokkeslæt)."""
+    if not selector:
+        return ""
+    parts = [el.get_text(" ", strip=True) for el in node.select(selector)]
+    parts = [p for p in parts if p]
+    # Fjern gentagelser, bevar rækkefølge
+    return " ".join(dict.fromkeys(parts))
 
 
 def parse_html(source: Source, content: str) -> list[RawItem]:
@@ -79,7 +101,8 @@ def parse_html(source: Source, content: str) -> list[RawItem]:
     seen: set[str] = set()
     for node in soup.select(sel["opslag"]):
         titel = _first_text(node, sel.get("titel", "")) or node.get_text(" ", strip=True)[:120]
-        link_node = node.select_one(sel.get("link", "a"))
+        # Opslaget kan selv være linket (<a> der omslutter hele kortet)
+        link_node = node if node.name == "a" and node.get("href") else node.select_one(sel.get("link", "a"))
         href = link_node.get("href") if link_node else None
         if not href or not titel:
             continue
@@ -92,27 +115,81 @@ def parse_html(source: Source, content: str) -> list[RawItem]:
             url=url,
             titel=titel,
             tekst=_first_text(node, sel.get("resume", "")),
-            dato_tekst=_first_text(node, sel.get("dato", "")),
+            dato_tekst=_all_text(node, sel.get("dato", "")),
         ))
     return items
 
 
-def parse(source: Source, content: str) -> list[RawItem]:
-    if source.type == SourceType.RSS:
-        return parse_rss(source, content)
-    return parse_html(source, content)
+# --- Sitemap -----------------------------------------------------------------
+
+def parse_sitemap(source: Source, content: str) -> list[tuple[str, str]]:
+    """Returnerer (url, lastmod) for de sider i sitemappet, der matcher kildens
+    `sitemap.prefix`, nyeste først, højst `sitemap.max` stk."""
+    prefix = source.sitemap.get("prefix")
+    if not prefix:
+        raise ValueError(f"Kilden {source.id} mangler sitemap.prefix")
+    soup = BeautifulSoup(content, "xml")
+    found = []
+    for url_node in soup.find_all("url"):
+        loc = url_node.find("loc")
+        if not loc:
+            continue
+        loc_text = loc.get_text(strip=True)
+        if not loc_text.startswith(prefix) or loc_text.rstrip("/") == prefix.rstrip("/"):
+            continue
+        lastmod = url_node.find("lastmod")
+        found.append((loc_text, lastmod.get_text(strip=True) if lastmod else ""))
+    found.sort(key=lambda t: t[1], reverse=True)
+    return found[: int(source.sitemap.get("max", SITEMAP_MAX_DEFAULT))]
 
 
-def fetch_source(db: Database, source: Source, content: str | None = None) -> FetchResult:
+def parse_article_page(source: Source, url: str, content: str, dato_tekst: str = "") -> RawItem:
+    """Lav et RawItem ud fra en enkelt artikelside. Titel tages fra <h1> eller
+    <title>, resumé fra meta description."""
+    soup = BeautifulSoup(content, "html.parser")
+    sel = source.html
+    titel = _first_text(soup, sel.get("titel", "")) or _first_text(soup, "h1")
+    if not titel and soup.title:
+        titel = soup.title.get_text(strip=True).split("|")[0].strip()
+    tekst = _first_text(soup, sel.get("resume", ""))
+    if not tekst:
+        meta = soup.find("meta", attrs={"name": "description"}) or soup.find("meta", attrs={"property": "og:description"})
+        tekst = (meta.get("content") or "").strip() if meta else ""
+    return RawItem(source_id=source.id, url=url, titel=titel or url, tekst=tekst, dato_tekst=dato_tekst)
+
+
+def fetch_sitemap_items(db: Database, source: Source, content: str, fetcher: Fetcher) -> list[RawItem]:
+    """Find artikler via sitemap og hent kun de sider, vi ikke allerede har
+    med samme ændringsdato. Det holder antallet af kald nede."""
+    items = []
+    for url, lastmod in parse_sitemap(source, content):
+        existing = db.get_raw_item(source.id, url)
+        if existing and existing.dato_tekst == lastmod:
+            items.append(existing)
+            continue
+        items.append(parse_article_page(source, url, fetcher(url), dato_tekst=lastmod))
+    return items
+
+
+# --- Samlet ------------------------------------------------------------------
+
+def fetch_source(db: Database, source: Source, content: str | None = None,
+                 fetcher: Fetcher = hent) -> FetchResult:
     """Hent én kilde og registrér opslag i databasen.
 
     `content` kan gives direkte (til tests og offline-kørsel); ellers hentes URL'en.
+    `fetcher` bruges til eventuelle ekstra sider (sitemap-kilder) og kan byttes ud i tests.
     """
     result = FetchResult(source_id=source.id, ok=True)
     try:
         if content is None:
-            content = hent(source.url)
-        items = parse(source, content)
+            content = fetcher(source.url)
+        if source.type == SourceType.RSS:
+            items = parse_rss(source, content)
+        elif source.type == SourceType.SITEMAP:
+            items = fetch_sitemap_items(db, source, content, fetcher)
+        else:
+            items = parse_html(source, content)
     except Exception as e:  # noqa: BLE001 - vi vil rapportere alle fejl pr. kilde
         return FetchResult(source_id=source.id, ok=False, fejl=f"{type(e).__name__}: {e}")
 
