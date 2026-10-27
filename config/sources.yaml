@@ -180,6 +180,23 @@ kilder:
 
   # --- Sociale medier (via rss.app) --------------------------------------------------
 
+  - id: fb-folkely
+    navn: Folkely Festival på Facebook
+    url: https://rss.app/feeds/B3oom7aZQs2Pzi0K.xml
+    type: rss
+    kategori: kultur
+    by: Hundested
+    tillid: 4
+    frekvens: 6
+    prioritet: 3
+    billeder: ja
+    sprog: da
+    verificeret: true
+    regler: >
+      Festivalens egen Facebook-side via rss.app. Her kommer nye navne og
+      billetnyt først. Officiel kilde for festivalens egne oplysninger.
+      Opslagene er skrevet i reklametone; skriv dem om til neutral tekst.
+
   - id: fb-3390-hundested
     navn: Facebook-gruppen "3390 Hundested"
     url: https://rss.app/feeds/xe11V1dIpD8BrG1y.xml

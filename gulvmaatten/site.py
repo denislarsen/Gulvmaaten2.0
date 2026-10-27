@@ -359,7 +359,7 @@ def forside_html(forside: Forside, nu: datetime) -> str:
         f'{_sektion("nyheder", p["nyheder"] + p["oevrige"])}{_udland(p["udland"])}</div>'
         f'{_fod()}'
     )
-    return _dokument("Gulvmåtten · Hundested", krop)
+    return _dokument("Gulvmåtten", krop)
 
 
 def _afsnit(tekst: str) -> str:
