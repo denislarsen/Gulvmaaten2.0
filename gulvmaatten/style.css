@@ -12,6 +12,7 @@
   --lyserod: #f4c6d6;
   --lyserod-moerk: #b0285e;
   --gul: #f6c445;
+  --hik: #1f4f9c;
   --overskrift: "Oswald", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --broed: "Source Serif 4", Georgia, "Times New Roman", serif;
 }
@@ -268,6 +269,23 @@ h1, h2, h3, .masthead, .teaser__titel, .topboks, .annonce, .bolig__pris {
 .folkely__punkt span { font-family: var(--overskrift); font-weight: 600; font-size: 17px; line-height: 1.15; }
 .folkely__punkt:hover span { text-decoration: underline; }
 
+/* Hundested IK: blåt bånd med historier og næste hjemmekampe */
+.hik { background: var(--hik); color: #fff; padding: 12px 14px 14px; margin: 22px 0 0; }
+.hik__navn { font-family: var(--overskrift); font-size: 26px; font-weight: 700; margin: 0 0 10px; }
+.hik__navn small { font-size: 15px; font-weight: 500; opacity: .8; margin-left: 6px; }
+.hik__indhold { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+.hik__historier { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; min-width: 0; }
+.hik__historie { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.hik__historie img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.hik__historie span { font-family: var(--overskrift); font-weight: 600; font-size: 17px; line-height: 1.15; }
+.hik__historie:hover span { text-decoration: underline; }
+.hik__kampe { background: rgba(255, 255, 255, .1); padding: 8px 12px; min-width: 0; }
+.hik__kampe h3 { font-family: var(--overskrift); font-size: 13px; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 6px; }
+.hik__kampe ul { list-style: none; margin: 0; padding: 0; }
+.hik__kampe li { padding: 5px 0; border-top: 1px solid rgba(255, 255, 255, .2); font-size: 15px; line-height: 1.3; }
+.hik__kampe b { font-family: var(--overskrift); font-weight: 600; display: block; text-transform: capitalize; }
+.hik__kampe a:hover { text-decoration: underline; }
+
 /* --- Artikelside ------------------------------------------------------------- */
 
 .artikel { max-width: 720px; margin: 24px auto 0; }
@@ -327,6 +345,9 @@ h1, h2, h3, .masthead, .teaser__titel, .topboks, .annonce, .bolig__pris {
   .kort p { display: none; }
   .sektion--folkely { margin: 0 -16px; padding: 18px 16px; }
   .folkely { flex-direction: column; align-items: stretch; gap: 10px; }
+  .hik__indhold, .hik__historier { grid-template-columns: 1fr; }
+  .hik__historie { flex-direction: row; align-items: center; }
+  .hik__historie img { width: 88px; flex: 0 0 auto; }
   .boliger__liste { gap: 12px; }
   .bolig__pris { font-size: 19px; }
 }

@@ -50,6 +50,7 @@ fokus_ord:
 # Kategorier en artikel kan tildeles. Rækkefølgen er rækkefølgen på forsiden.
 kategorier:
   - nyheder
+  - politi
   - havnen
   - kultur
   - folkely

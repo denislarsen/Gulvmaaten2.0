@@ -24,10 +24,9 @@ from pydantic import BaseModel, Field
 
 from .agent import MODEL, SYSTEM_REDAKTION, dagens_dato, hent_artikeltekst
 from .db import Database
-from .models import Event, RawItem, Source
+from .models import LOKALE_STEDER, Event, RawItem, Source
 
 HORISONT_DAGE = 90
-LOKALE_STEDER = ("hundested", "lynæs", "kikhavn", "torup", "dyssekilde", "nødebohuse")
 
 
 class Arrangement(BaseModel):
@@ -121,10 +120,29 @@ def behandl_kalender_item(db: Database, client: anthropic.Anthropic, item: RawIt
     return KalenderResultat(raw_item_id=item.id, titel=item.titel, antal=len(events))
 
 
-def koer_kalender(db: Database, client: anthropic.Anthropic, limit: int = 30) -> list[KalenderResultat]:
+def kamp_event(item: RawItem) -> Event:
+    """En kamp fra et kampprogram har allerede dato, hold og bane. Den kommer
+    direkte i kalenderen uden at Claude skal læse den."""
+    d = item.data
+    hold = f" ({d['hold']})" if d.get("hold") and d["hold"].lower() != "senior" else ""
+    return Event(
+        titel=f"Fodbold: {d['hjemme']} – {d['ude']}{hold}", start=datetime.fromisoformat(d["start"]),
+        sted=d.get("bane", ""), by="Hundested", arrangoer=d.get("hjemme", ""), url=item.url,
+        beskrivelse=d.get("raekke", ""), source_id=item.source_id,
+    )
+
+
+def koer_kalender(db: Database, client: anthropic.Anthropic | None, limit: int = 30) -> list[KalenderResultat]:
     sources = {s.id: s for s in db.get_sources(kun_aktive=False)}
-    return [behandl_kalender_item(db, client, item, sources.get(item.source_id))
-            for item in db.opslag_til_kalender(limit=limit)]
+    resultater = []
+    for item in db.opslag_til_kalender(limit=limit):
+        if item.data.get("kamp"):
+            db.erstat_events(item.id, [kamp_event(item)])
+            db.marker_kalender_udtraek(item)
+            resultater.append(KalenderResultat(raw_item_id=item.id, titel=item.titel, antal=1))
+        elif client is not None:
+            resultater.append(behandl_kalender_item(db, client, item, sources.get(item.source_id)))
+    return resultater
 
 
 def i_hundested(e: Event) -> bool:

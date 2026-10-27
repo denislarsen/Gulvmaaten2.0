@@ -25,6 +25,11 @@ Det, der virker nu:
   Boligsiden for 3390
 - Redaktion med Claude: vurdering, research og udkast (`gulvmaatten/agent.py`)
 - Madsektion med "Ugens spisested" og fast kørselsplan (`gulvmaatten/mad.py`)
+- Politiets døgnrapport (Nordsjællands Politi): kun hændelser i Hundested og
+  omegn bliver til udkast, altid med høj risiko og uden navne
+- Hundested IK fra klubbens egen hjemmeside: nyheder (futsal og fodbold) og
+  hjemmekampe direkte i kalenderen, med eget blåt bånd på forsiden
+- Server til drift (`gulvmaatten/server.py`, `Dockerfile`) med redaktørside
 - Hjemmeside i avisstil med sektioner for havnen og kulturen, Folkely, sport,
   mad, boliger til salg og udlandsstof. Tre kolonner på store skærme, én på
   telefoner (`gulvmaatten/site.py`, `gulvmaatten/style.css`)
@@ -32,11 +37,9 @@ Det, der virker nu:
 
 Det mangler:
 
-- Futsal: Hundested IK's egen side er ikke fundet. Kilden står i
-  `sources.yaml` som inaktiv, indtil vi har en adresse
-- Halsnæs Bibliotekerne. (Halsnæs Avis, tidligere Halsnæs Posten, dækkes via
-  Sjællandske Mediers Halsnæs-side på sn.dk)
-- Sociale medier hentes ikke automatisk (se nedenfor)
+- Futsalkampenes tider: klubbens kampprogram viser kun DBU-fodbold
+- Kamelens Kys: hjemmesiden afviser automatiske besøg (se `sources.yaml`)
+- Sociale medier hentes ikke automatisk lige nu (se nedenfor)
 - Opfølgning: opdatering af artikler og markering af aflyste arrangementer
 
 ## Sådan kører du det
@@ -63,6 +66,15 @@ python -m gulvmaatten godkend 7 --karakter 5  # Godkend anmeldelse med 5 af 6 gu
 
 python -m pytest                      # Tests (kræver ikke internet)
 ```
+
+### Drift på Railway
+
+`python -m gulvmaatten server` viser hjemmesiden, kører de faste opgaver hver
+time og giver redaktøren en side på `/redaktion`. Siden er privat, indtil
+`GULVMAATTEN_ADGANG=offentlig`: man logger ind med ejerens kode
+(`GULVMAATTEN_REDAKTOER_KODE`) eller et personligt link, som redaktøren laver
+under *Adgang* (eller med `python -m gulvmaatten adgang opret --navn ...`). `Dockerfile` bygger det hele. Se
+`docs/railway.md` for opsætningen trin for trin.
 
 ### Kørselsplan
 
@@ -110,11 +122,12 @@ udfyldt. Karakteren gives i gulvmåtter (1-6) med `godkend --karakter`.
 ## Sociale medier
 
 Facebook og Instagram kræver login, og Meta tillader ikke automatisk
-indsamling. Vi bruger derfor rss.app, der laver sider og grupper om til
-RSS-feeds, som crawleren læser som alle andre feeds. Et nyt feed tilføjes
-med en linje i `config/sources.yaml`.
+indsamling. rss.app kan lave sider og grupper om til RSS-feeds, men koster
+penge. Lige nu prøver vi uden: feeds fra rss.app står i `config/sources.yaml`
+med `aktiv: false` og kan slås til igen.
 
-- Facebook-gruppen "3390 Hundested" er med. Opslagene er skrevet af
+- Folkely og Hundested IK hentes fra deres egne hjemmesider i stedet.
+- Facebook-gruppen "3390 Hundested" kan slås til igen. Opslagene er skrevet af
   privatpersoner og bliver derfor kun tips til redaktøren (`kun_tip: true`).
   Navne og billeder fra gruppen bruges aldrig.
 - Sider fra havnen, Oplev Hundested, Folkely og spisestederne står i

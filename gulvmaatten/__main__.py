@@ -21,6 +21,9 @@
     python -m gulvmaatten kalender --vis  Vis de kommende arrangementer
     python -m gulvmaatten service         Skriv ugens servicehistorier (kalender og boligmarked)
     python -m gulvmaatten planlagt        Kør alt, der er forfaldent (til cron)
+    python -m gulvmaatten adgang opret --navn Hanne   Lav et personligt adgangslink
+    python -m gulvmaatten server          Vis hjemmesiden, kør de faste opgaver hver time og
+                                          giv redaktøren en side på /redaktion (fx på Railway)
 """
 
 from __future__ import annotations
@@ -76,13 +79,12 @@ def cmd_sources(db: Database, args) -> None:
 
 
 def _claude_client():
-    # Claude Codes skymiljø fjerner ANTHROPIC_API_KEY, så GULVMAATTEN_API_KEY bruges som alternativ.
-    api_key = os.environ.get("GULVMAATTEN_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        sys.exit("Ingen API-nøgle. Sæt GULVMAATTEN_API_KEY i miljøets indstillinger (Environment variables).")
-    import anthropic
+    from .drift import IngenNoegle, claude_client
 
-    return anthropic.Anthropic(api_key=api_key)
+    try:
+        return claude_client()
+    except IngenNoegle as e:
+        sys.exit(str(e))
 
 
 def cmd_redaktion(db: Database, args) -> None:
@@ -149,24 +151,22 @@ def _hent_artikel(db: Database, article_id: int):
 
 
 def cmd_godkend(db: Database, args) -> None:
-    a = _hent_artikel(db, args.id)
-    if not a.kilder:
-        sys.exit("Artiklen har ingen kilder og kan ikke godkendes.")
-    if "tip" in a.tags:
-        sys.exit("Et tip fra et andet medie kan ikke publiceres. Find en selvstændig kilde.")
-    if "[Udfyldes efter besøg" in a.broedtekst:
-        sys.exit("Anmeldelsen mangler redaktørens dom. Ret brødteksten, før den godkendes.")
-    if args.karakter:
-        a.tags = [t for t in a.tags if not t.startswith("karakter:")] + [f"karakter:{args.karakter}"]
-    a.status = ReviewStatus.APPROVED
-    db.save_article(a)
+    from .drift import KanIkkeGodkendes, godkend
+
+    try:
+        a = godkend(db, args.id, args.karakter)
+    except KanIkkeGodkendes as e:
+        sys.exit(str(e))
     print(f"#{a.id} godkendt: {a.overskrift}")
 
 
 def cmd_afvis(db: Database, args) -> None:
-    a = _hent_artikel(db, args.id)
-    a.status = ReviewStatus.REJECTED
-    db.save_article(a)
+    from .drift import KanIkkeGodkendes, afvis
+
+    try:
+        a = afvis(db, args.id)
+    except KanIkkeGodkendes as e:
+        sys.exit(str(e))
     print(f"#{a.id} afvist: {a.overskrift}")
 
 
@@ -220,31 +220,33 @@ def cmd_site(db: Database, args) -> None:
 
 def cmd_planlagt(db: Database, args) -> None:
     """Kør alt, der er forfaldent. Beregnet til at blive kaldt fra cron, fx hver time."""
-    from . import mad
-    from .agent import koer_redaktion
+    from .drift import koer_planlagt
 
-    from .kalender import koer_kalender
+    koer_planlagt(db, _claude_client(), limit=args.limit)
 
-    for r in fetch_all(db, kun_forfaldne=True):
-        print(r)
-    client = _claude_client()
-    resultater = koer_redaktion(db, client, limit=args.limit)
-    print(f"Redaktion: {len(resultater)} vurderet, {sum(1 for r in resultater if r.artikel_id)} udkast.")
-    kal = koer_kalender(db, client, limit=args.limit)
-    print(f"Kalender: {len(kal)} opslag læst, {sum(r.antal for r in kal)} arrangementer fundet.")
-    indst = mad.mad_indstillinger()
-    if mad.er_forfalden(db, mad.KOERSEL_FIND_NYE, indst["find_nye_spisesteder_hver_dage"]):
-        nye = mad.find_nye_spisesteder(db)
-        print(f"Nye spisesteder: {', '.join(nye) if nye else 'ingen'}")
-    from . import service
 
-    for koersel, fn in ((service.KOERSEL_UGEN, service.det_sker_i_ugen), (service.KOERSEL_BOLIG, service.boligmarkedet)):
-        if mad.er_forfalden(db, koersel, 7):
-            artikel_id = fn(db)
-            print(f"{koersel}: udkast #{artikel_id}" if artikel_id else f"{koersel}: ikke nok data")
-    if mad.er_forfalden(db, mad.KOERSEL_UGENS, indst["ugens_spisested_hver_dage"]):
-        artikel_id = mad.lav_ugens_spisested(db, client)
-        print(f"Ugens spisested: udkast #{artikel_id}" if artikel_id else "Ugens spisested: intet nyt sted")
+def cmd_adgang(db: Database, args) -> None:
+    from . import adgang
+
+    if args.handling == "opret":
+        if not args.navn:
+            sys.exit("Skriv et navn: adgang opret --navn 'Hanne'")
+        _, token = adgang.opret_adgang(db, args.navn, "redaktoer" if args.redaktoer else "laeser")
+        print(f"Link til {args.navn} (vises kun nu):\n{args.url.rstrip('/')}/adgang/{token}")
+    elif args.handling == "spaer":
+        adgang.spaer_adgang(db, args.id)
+        print(f"Link #{args.id} er spærret.")
+    else:
+        for r in adgang.adgange(db):
+            status = "spærret" if r["spaerret"] else f"sidst brugt {(r['sidst_brugt'] or 'aldrig')[:16]}"
+            print(f"#{r['id']:3} {r['navn']:25} {r['rolle']:10} {status}")
+
+
+def cmd_server(db: Database, args) -> None:
+    from .server import start
+
+    db.close()
+    start(port=args.port, db_sti=Path(args.db), hver_minutter=args.hver)
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -299,6 +301,18 @@ def main(argv: list[str] | None = None) -> None:
     pl = sub.add_parser("planlagt")
     pl.add_argument("--limit", type=int, default=20, help="Højst så mange opslag til redaktionen pr. kørsel")
     pl.set_defaults(fn=cmd_planlagt)
+    ad = sub.add_parser("adgang", help="Personlige adgangslinks")
+    ad.add_argument("handling", choices=["opret", "liste", "spaer"])
+    ad.add_argument("--navn")
+    ad.add_argument("--redaktoer", action="store_true", help="Må også bruge /redaktion")
+    ad.add_argument("--url", default=os.environ.get("GULVMAATTEN_URL", "http://localhost:8000"),
+                    help="Sidens adresse, fx https://gulvmaatten.up.railway.app")
+    ad.add_argument("--id", type=int)
+    ad.set_defaults(fn=cmd_adgang)
+    sv = sub.add_parser("server")
+    sv.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
+    sv.add_argument("--hver", type=int, default=60, help="Minutter mellem de faste kørsler (0 = slået fra)")
+    sv.set_defaults(fn=cmd_server)
 
     args = p.parse_args(argv)
     db = Database(args.db)

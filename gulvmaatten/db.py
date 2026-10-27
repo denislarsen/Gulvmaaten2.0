@@ -6,13 +6,16 @@ Holder det simpelt: én fil, én tabel pr. datatype. Lister gemmes som JSON.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 
 from .models import Article, Event, Publication, RawItem, ReviewStatus, RiskLevel, Source, SourceType
 
-DEFAULT_DB = Path("data/gulvmaatten.db")
+# På en server (fx Railway) peger GULVMAATTEN_DATA på en vedvarende disk
+DATA_DIR = Path(os.environ.get("GULVMAATTEN_DATA") or os.environ.get("RAILWAY_VOLUME_MOUNT_PATH") or "data")
+DEFAULT_DB = DATA_DIR / "gulvmaatten.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS sources (
@@ -121,6 +124,27 @@ CREATE TABLE IF NOT EXISTS publications (
     trukket_tilbage TEXT
 );
 
+-- Personlige adgangslinks. Selve linket gemmes ikke, kun et fingeraftryk af det.
+CREATE TABLE IF NOT EXISTS adgange (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    navn TEXT NOT NULL,
+    rolle TEXT NOT NULL,
+    token_hash TEXT UNIQUE NOT NULL,
+    oprettet TEXT NOT NULL,
+    sidst_brugt TEXT,
+    spaerret INTEGER DEFAULT 0
+);
+
+-- Indloggede browsere. adgang_id er tom, når ejeren er logget ind med koden.
+CREATE TABLE IF NOT EXISTS sessioner (
+    hash TEXT PRIMARY KEY,
+    adgang_id INTEGER REFERENCES adgange(id),
+    navn TEXT NOT NULL,
+    rolle TEXT NOT NULL,
+    oprettet TEXT NOT NULL,
+    udloeber TEXT NOT NULL
+);
+
 -- Hvornår faste opgaver (fx "Ugens spisested") sidst er kørt
 CREATE TABLE IF NOT EXISTS koersler (
     navn TEXT PRIMARY KEY,
@@ -160,7 +184,8 @@ class Database:
         self.path = Path(path)
         if str(self.path) != ":memory:":
             self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.conn = sqlite3.connect(str(self.path))
+        # Serveren åbner en forbindelse pr. tråd; timeout venter på andres skrivninger
+        self.conn = sqlite3.connect(str(self.path), timeout=30)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
         self._migrer()
