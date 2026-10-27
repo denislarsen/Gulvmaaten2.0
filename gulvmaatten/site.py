@@ -14,6 +14,7 @@ kreditering. Kilder med `billeder: nej` giver aldrig billeder.
 from __future__ import annotations
 
 import re
+import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
 from html import escape
@@ -129,6 +130,8 @@ def saml_sider(db: Database, forhaandsvisning: bool = False) -> list[Side]:
         statusser += [ReviewStatus.APPROVED, ReviewStatus.NEEDS_REVIEW]
     sider = []
     for a in db.get_articles(statusser):
+        if "tip" in a.tags:
+            continue
         pub = db.get_publication(a.id) if a.status == ReviewStatus.PUBLISHED else None
         if pub and pub.trukket_tilbage:
             continue
@@ -162,11 +165,13 @@ def fordel(forside: Forside) -> dict:
     mad = [s for s in forside.sider if s.sektion == "mad"]
     pladser = {
         "mad": tag(mad, 1),
+        # Folkely har særligt fokus og får sit eget bånd før resten fordeles
+        "folkely": tag([s for s in forside.sider if s.sektion == "folkely"], 3),
         "tophistorie": tag(med_billede or alle, 1),
     }
     pladser["topstrimmel"] = tag([s for s in alle if s.sektion != "mad"], 2)
     pladser["sidekolonne"] = tag([s for s in alle if s.sektion != "mad"], 2)
-    for sek, antal in (("folkely", 3), ("havn", 6), ("sport", 3), ("nyheder", 6), ("udland", 2)):
+    for sek, antal in (("havn", 6), ("sport", 3), ("nyheder", 6), ("udland", 2)):
         pladser[sek] = tag([s for s in forside.sider if s.sektion == sek], antal)
     pladser["oevrige"] = tag([s for s in alle if s.sektion != "mad"], 8)
     return pladser
@@ -402,6 +407,8 @@ def byg_site(db: Database, ud: Path = SITE_DIR, forhaandsvisning: bool = False,
     except FileNotFoundError:
         annoncer = []
     forside = Forside(sider=saml_sider(db, forhaandsvisning), boliger=nyeste_boliger(db), annoncer=annoncer)
+    # Ryd gamle artikelsider, så tilbagetrukne artikler ikke ligger tilbage
+    shutil.rmtree(ud / "artikel", ignore_errors=True)
     (ud / "artikel").mkdir(parents=True, exist_ok=True)
     skrevet = []
     sti = ud / "index.html"

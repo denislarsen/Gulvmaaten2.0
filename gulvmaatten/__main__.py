@@ -149,6 +149,8 @@ def cmd_godkend(db: Database, args) -> None:
     a = _hent_artikel(db, args.id)
     if not a.kilder:
         sys.exit("Artiklen har ingen kilder og kan ikke godkendes.")
+    if "tip" in a.tags:
+        sys.exit("Et tip fra et andet medie kan ikke publiceres. Find en selvstændig kilde.")
     if "[Udfyldes efter besøg" in a.broedtekst:
         sys.exit("Anmeldelsen mangler redaktørens dom. Ret brødteksten, før den godkendes.")
     if args.karakter:

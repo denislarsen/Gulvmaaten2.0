@@ -244,6 +244,11 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
         resultat.sprunget_over = f"score {vurdering.score} under tærskel {taerskel}"
         return resultat
 
+    if source and source.kategori == "medie":
+        # Andre mediers historier skrives ikke om. De bliver et tip til redaktøren.
+        resultat.artikel_id = gem_tip(db, item, source, vurdering)
+        return resultat
+
     fuld_tekst = hent_tekst(item.url)
     relaterede = find_relaterede(db, item)
     udkast = skriv_udkast(client, item, source, fuld_tekst, relaterede, vurdering)
@@ -273,6 +278,23 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
     )
     resultat.artikel_id = db.save_article(article)
     return resultat
+
+
+def gem_tip(db: Database, item: RawItem, source: Source, vurdering: Vurdering) -> int:
+    """Et tip fra et andet medie. Vises for redaktøren, aldrig på hjemmesiden."""
+    return db.save_article(Article(
+        overskrift=f"Tip: {item.titel}",
+        resume=vurdering.begrundelse,
+        broedtekst=(f"{source.navn} har bragt historien. Den må ikke skrives om. Find en selvstændig kilde, "
+                    "fx kommunen, arrangøren eller klubben, før der skrives en artikel."),
+        kategori=vurdering.kategori,
+        by=vurdering.by,
+        tags=["tip"],
+        kilder=[item.url],
+        risiko=RiskLevel.HIGH,
+        status=ReviewStatus.NEEDS_REVIEW,
+        raw_item_ids=[item.id],
+    ))
 
 
 def koer_redaktion(db: Database, client: anthropic.Anthropic, limit: int = 10,
