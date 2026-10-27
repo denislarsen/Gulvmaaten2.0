@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from html import escape
 from pathlib import Path
@@ -181,6 +181,23 @@ def fordel(forside: Forside) -> dict:
     # Er der ikke nok nyheder, fyldes der op med det, der er tilbage
     if len(pladser["nyheder"]) < 4:
         pladser["nyheder"] += tag([s for s in alle if s.sektion not in ("mad", "folkely")], 4 - len(pladser["nyheder"]))
+    return _unikke_billeder(pladser)
+
+
+def _unikke_billeder(pladser: dict) -> dict:
+    """Det samme billede må kun stå én gang på forsiden. Pladserne gennemgås i
+    den rækkefølge, de vises; senere artikler med et brugt billede vises uden."""
+    brugte: set[str] = set()
+    for plads in ("tophistorie", "sidekolonne", "nyheder", "folkely", "havn", "mad", "sport", "udland"):
+        nye = []
+        for s in pladser.get(plads, []):
+            url = s.artikel.billede_url
+            if url and url in brugte:
+                s = replace(s, artikel=replace(s.artikel, billede_url="", billede_kredit=""))
+            elif url:
+                brugte.add(url)
+            nye.append(s)
+        pladser[plads] = nye
     return pladser
 
 
@@ -429,9 +446,9 @@ def forside_html(forside: Forside, nu: datetime) -> str:
         f'<div class="to-kolonner to-kolonner--bred">'
         f'{_sektion("nyheder", p["nyheder"])}{_det_sker(forside.kalender, nu)}</div>'
         f'{_folkely(p["folkely"])}'
+        f'{_sektion("sport", p["sport"])}'
         f'{_sektion("havn", p["havn"])}'
         f'<div class="to-kolonner">{_mad_boks(p["mad"])}{_boliger(forside.boliger)}</div>'
-        f'{_sektion("sport", p["sport"])}'
         f'{annonce}'
         f'{_udland(p["udland"])}'
         f'{_fod()}'

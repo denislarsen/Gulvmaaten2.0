@@ -67,3 +67,14 @@ def test_boliger_vises_med_pris_og_maegler(db, tmp_path):
     # De to nyeste på markedet, ikke den der har været til salg i 30 dage
     assert "Vej 1" in forside and "Vej 2" in forside and "Vej 0" not in forside
     assert "2.500.001 kr." in forside
+
+
+def test_samme_billede_kun_en_gang_paa_forsiden(db, tmp_path):
+    _artikel(db, "Eftermiddagssang på biblioteket", kategori="arrangementer", billede="https://bib.dk/klaver.jpg")
+    _artikel(db, "Det sker i Hundested i uge 44", kategori="arrangementer", billede="https://bib.dk/klaver.jpg")
+    byg_site(db, tmp_path, nu=NU)
+    forside = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert forside.count("https://bib.dk/klaver.jpg") == 1
+    # Artikelsiden beholder sit billede
+    artikel = (tmp_path / "artikel" / "det-sker-i-hundested-i-uge-44.html").read_text(encoding="utf-8")
+    assert "https://bib.dk/klaver.jpg" in artikel

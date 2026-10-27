@@ -314,24 +314,25 @@ kilder:
 
   # --- Sport -----------------------------------------------------------------------
 
-  - id: hundested-ik-futsal
-    navn: Hundested IK, futsal
-    url: https://www.dbu.dk/
-    type: html
+  - id: hundested-ik
+    navn: Hundested IK (fodbold og futsal) på Facebook
+    url: https://rss.app/feeds/FyqmZsm42fgKZEPp.xml
+    type: rss
     kategori: sport
     by: Hundested
     tillid: 4
-    frekvens: 24
+    frekvens: 6
     prioritet: 2
     billeder: ja
-    aktiv: false
+    kalender: true
     sprog: da
-    verificeret: false
-    html:
-      opslag: article
+    verificeret: true
     regler: >
-      MANGLER URL. Klubbens egen side eller holdside er ikke fundet. Indtil
-      da fanges futsal via Frederiksborg Amts Avis og kommunen.
+      Klubbens egen Facebook-side via rss.app (verificeret 27. oktober 2026).
+      Både futsal og fodbold. Futsal har særligt fokus (se fokus_ord i
+      gulvmaatten.yaml). Kampe med tid og sted kommer i kalenderen. Børne- og
+      ungdomsspillere nævnes aldrig ved navn. Resultater skal stå i opslaget;
+      gæt aldrig en stilling.
 
   # --- Boliger --------------------------------------------------------------------
 

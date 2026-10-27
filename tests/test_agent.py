@@ -113,3 +113,15 @@ def test_andet_medie_giver_tip_ikke_artikel(db, html_source):
     a = db.get_article(r.artikel_id)
     assert len(client.messages.kald) == 1, "intet udkast skrives ud fra et andet medie"
     assert a.tags == ["tip"] and a.overskrift.startswith("Tip:")
+
+
+def test_fokusord_saenker_taersklen(db, html_source):
+    db.upsert_source(html_source)
+    item = _item(db, html_source, "Futsal: Hundested IK forsvarer førstepladsen")
+    vurdering = Vurdering(score=3, kategori="sport", by="Hundested", risiko="low", er_arrangement=True,
+                          begrundelse="Kamp.")
+    udkast = Udkast(overskrift="Hundested IK forsvarer førstepladsen", resume="Lørdag.", broedtekst="Kamp.",
+                    praktisk="", tags=["futsal"], kilder=[], usikkerheder="", risiko="low")
+    r = behandl_item(db, FakeClient([vurdering, udkast]), item, {html_source.id: html_source},
+                     hent_tekst=lambda u: "", fokus_ord=["futsal"])
+    assert r.artikel_id is not None, "score 3 er nok, når opslaget handler om futsal"

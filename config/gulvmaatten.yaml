@@ -41,6 +41,12 @@ noegleord:
   - generalforsamling
   - vejarbejde
 
+# Emner med særligt fokus. Opslag, der nævner dem, har en lavere tærskel
+# for at blive til et udkast (ligesom kilder med prioritet 3).
+fokus_ord:
+  - futsal
+  - Folkely
+
 # Kategorier en artikel kan tildeles. Rækkefølgen er rækkefølgen på forsiden.
 kategorier:
   - nyheder

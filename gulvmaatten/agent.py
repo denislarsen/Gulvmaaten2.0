@@ -34,7 +34,7 @@ SCORE_TAERSKEL = 4  # Opslag med lavere score bliver ikke til artikler
 
 SYSTEM_REDAKTION = """Du er redaktionssekretær på Gulvmåtten, et lokalt netmedie for Hundested i Halsnæs Kommune. Navnet kommer fra den gamle gratisavis i Hundested, som mange brugte som gulvmåtte.
 
-Stofområdet er Hundested med Lynæs, Kikhavn, Torup og Dyssekilde. Havnen, Kulturkajen, Lynæs Surfcenter og Folkely Festival er byens kulturelle knudepunkter. Futsal og sejlsport fylder i sportsdækningen.
+Stofområdet er Hundested med Lynæs, Kikhavn, Torup og Dyssekilde. Havnen, Kulturkajen, Lynæs Surfcenter og Folkely Festival er byens kulturelle knudepunkter. Futsal har særligt fokus i sportsdækningen. Fodbold og sejlsport dækkes også. Børne- og ungdomsspillere nævnes aldrig ved navn.
 
 Frederiksværk og resten af kommunen er ikke vores stofområde. Historier derfra bringes kun, hvis de er usædvanlige, og så under kategorien "udlandsstof", hvor overskriften gerne må have et tørt glimt i øjet (fx "Udlandsstof: ..."). Kommunale beslutninger, der gælder hele Halsnæs, er almindeligt kommunestof.
 
@@ -127,6 +127,20 @@ def hent_artikeltekst(url: str, max_tegn: int = 6000) -> str:
     tekst = main.get_text("\n", strip=True)
     tekst = re.sub(r"\n{3,}", "\n\n", tekst)
     return tekst[:max_tegn]
+
+
+def har_fokus(item: RawItem, fokus_ord: list[str] | None) -> bool:
+    tekst = f"{item.titel} {item.tekst}".lower()
+    return any(o.lower() in tekst for o in (fokus_ord or []))
+
+
+def _fokus_ord() -> list[str]:
+    try:
+        from .config import load_settings
+
+        return load_settings().get("fokus_ord") or []
+    except FileNotFoundError:
+        return []
 
 
 def vaelg_billede(item: RawItem, source: Source | None) -> dict:
@@ -230,7 +244,7 @@ def skriv_udkast(client: anthropic.Anthropic, item: RawItem, source: Source | No
 
 def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
                  sources: dict[str, Source], taerskel: int = SCORE_TAERSKEL,
-                 hent_tekst=hent_artikeltekst) -> RedaktionResultat:
+                 hent_tekst=hent_artikeltekst, fokus_ord: list[str] | None = None) -> RedaktionResultat:
     """Kør hele pipelinen for ét opslag. `hent_tekst` kan byttes ud i tests."""
     source = sources.get(item.source_id)
     vurdering = vurder(client, item, source)
@@ -238,8 +252,8 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
                        er_arrangement=vurdering.er_arrangement)
     resultat = RedaktionResultat(raw_item_id=item.id, titel=item.titel,
                                  score=vurdering.score, kategori=vurdering.kategori)
-    # Kilder med særligt fokus (prioritet 3, fx Folkely) får en lavere tærskel
-    if source and source.prioritet >= 3:
+    # Kilder og emner med særligt fokus (Folkely, futsal) får en lavere tærskel
+    if (source and source.prioritet >= 3) or har_fokus(item, fokus_ord):
         taerskel -= 1
     if vurdering.score < taerskel:
         resultat.sprunget_over = f"score {vurdering.score} under tærskel {taerskel}"
@@ -306,6 +320,7 @@ def koer_redaktion(db: Database, client: anthropic.Anthropic, limit: int = 10,
     resultater = []
     # Boliglister og rene kalenderkilder vises i deres egne bokse og vurderes ikke som nyheder
     udelad = [s.id for s in sources.values() if s.type == SourceType.BOLIGSIDEN or s.kun_kalender]
+    fokus = _fokus_ord()
     for item in db.get_unassessed_raw_items(limit=limit, source_id=source_id, udelad=udelad):
-        resultater.append(behandl_item(db, client, item, sources, taerskel=taerskel))
+        resultater.append(behandl_item(db, client, item, sources, taerskel=taerskel, fokus_ord=fokus))
     return resultater
