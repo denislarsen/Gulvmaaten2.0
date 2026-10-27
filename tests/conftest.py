@@ -19,7 +19,7 @@ def db():
 def html_source():
     return Source(
         id="test-kommune", navn="Test Kommune", url="https://www.eksempel.dk/nyheder",
-        type=SourceType.HTML, kategori="kommune", by="Glostrup", tillid=5,
+        type=SourceType.HTML, kategori="kommune", by="Hundested", tillid=5,
         html={"opslag": "article.news-item", "titel": "h2", "link": "a", "dato": "time", "resume": "p.teaser"},
     )
 
@@ -28,7 +28,7 @@ def html_source():
 def rss_source():
     return Source(
         id="test-bib", navn="Test Bibliotek", url="https://eksempelbib.dk/rss",
-        type=SourceType.RSS, kategori="bibliotek", by="Brøndby", tillid=4,
+        type=SourceType.RSS, kategori="bibliotek", by="Hundested", tillid=4,
     )
 
 

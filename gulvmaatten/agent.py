@@ -27,12 +27,16 @@ from pydantic import BaseModel, Field
 
 from .db import Database
 from .fetch import hent
-from .models import Article, RawItem, ReviewStatus, RiskLevel, Source
+from .models import Article, RawItem, ReviewStatus, RiskLevel, Source, SourceType
 
 MODEL = "claude-opus-5-5"
 SCORE_TAERSKEL = 5  # Opslag med lavere score bliver ikke til artikler
 
-SYSTEM_REDAKTION = """Du er redaktionssekretær på Gulvmåtten, et lokalt netmedie for Glostrup og Brøndby på Københavns Vestegn.
+SYSTEM_REDAKTION = """Du er redaktionssekretær på Gulvmåtten, et lokalt netmedie for Hundested i Halsnæs Kommune. Navnet kommer fra den gamle gratisavis i Hundested, som mange brugte som gulvmåtte.
+
+Stofområdet er Hundested med Lynæs, Kikhavn, Torup og Dyssekilde. Havnen, Kulturkajen, Lynæs Surfcenter og Folkely Festival er byens kulturelle knudepunkter. Futsal og sejlsport fylder i sportsdækningen.
+
+Frederiksværk og resten af kommunen er ikke vores stofområde. Historier derfra bringes kun, hvis de er usædvanlige, og så under kategorien "udlandsstof", hvor overskriften gerne må have et tørt glimt i øjet (fx "Udlandsstof: ..."). Kommunale beslutninger, der gælder hele Halsnæs, er almindeligt kommunestof.
 
 Mediets regler, som du altid overholder:
 1. Ingen opdigtede fakta. Alle tal, navne, datoer, steder, priser og citater skal stå i det kildemateriale, du får. Kan noget ikke bekræftes, skriver du det under usikkerheder, ikke i artiklen.
@@ -40,18 +44,19 @@ Mediets regler, som du altid overholder:
 3. Korrekt før hurtigt. Modstridende eller uklare oplysninger giver ikke en artikel, men en note til redaktøren.
 4. Høj risiko kræver menneske. Politik, kriminalitet, sundhed, navngivne privatpersoner og kontroversielle sager får risiko "high".
 5. Ingen private persondata. Kun navne, der optræder i en offentlig kilde med redaktionel relevans, fx en borgmester, en forfatter eller en foredragsholder.
-6. Sproget er dansk, neutralt, præcist og letlæst. Korte sætninger. Ingen reklamesprog, ingen udråbstegn, ingen vurderende tillægsord.
+6. Sproget er dansk, neutralt, præcist og letlæst. Korte sætninger. Ingen reklamesprog, ingen udråbstegn, ingen vurderende tillægsord. Undtagelsen er udlandsstof, hvor en let ironisk tone er tilladt i overskriften.
+7. Andre medier er tips, ikke kilder. En historie fra Frederiksborg Amts Avis eller Halsnæs Avis må ikke skrives om. Den kræver en selvstændig kilde (kommunen, arrangøren, klubben). Har vi kun avisens version, skriver du det under usikkerheder.
 
-Kategorier: arrangementer, kommune, kultur, sport, foreningsliv, byudvikling, skole-og-institution, trafik.
+Kategorier: nyheder, havnen, kultur, folkely, sport, mad, arrangementer, kommune, foreningsliv, byudvikling, trafik, udlandsstof.
 """
 
 
 class Vurdering(BaseModel):
     """Claudes vurdering af ét opslag."""
 
-    score: int = Field(ge=0, le=10, description="Lokal nyhedsværdi 0-10 for borgere i Glostrup/Brøndby")
+    score: int = Field(ge=0, le=10, description="Lokal nyhedsværdi 0-10 for borgere i Hundested")
     kategori: str
-    by: str = Field(description="Glostrup, Brøndby eller Begge")
+    by: str = Field(description="Hundested, Halsnæs (hele kommunen) eller Frederiksværk")
     risiko: str = Field(description="low, medium eller high")
     er_arrangement: bool
     begrundelse: str = Field(description="1-2 sætninger")
@@ -124,6 +129,14 @@ def hent_artikeltekst(url: str, max_tegn: int = 6000) -> str:
     return tekst[:max_tegn]
 
 
+def vaelg_billede(item: RawItem, source: Source | None) -> dict:
+    """Billede til artiklen: kildens eget billede, hvis kilden tillader det.
+    Krediteringen følger altid med."""
+    if not item.billede_url or not source or not source.billeder:
+        return {"billede_url": "", "billede_kredit": ""}
+    return {"billede_url": item.billede_url, "billede_kredit": f"Foto: {source.navn}"}
+
+
 def _risiko(v: str) -> RiskLevel:
     try:
         return RiskLevel(v.lower().strip())
@@ -135,6 +148,7 @@ def _item_blok(item: RawItem, source: Source | None, fuld_tekst: str = "") -> st
     kilde = f"{source.navn} (tillid {source.tillid}/5, {source.by})" if source else item.source_id
     dele = [
         f"Kilde: {kilde}",
+        f"Om kilden: {source.regler.strip()}" if source and source.regler else "",
         f"URL: {item.url}",
         f"Titel: {item.titel}",
         f"Dato som kilden skriver den: {item.dato_tekst or 'ukendt'}",
@@ -142,17 +156,32 @@ def _item_blok(item: RawItem, source: Source | None, fuld_tekst: str = "") -> st
     ]
     if fuld_tekst:
         dele.append(f"Fuld tekst fra siden:\n{fuld_tekst}")
-    return "\n".join(dele)
+    return "\n".join(d for d in dele if d)
 
 
 # --- Trin 1: vurdering --------------------------------------------------------
 
+MAANEDER = ["januar", "februar", "marts", "april", "maj", "juni", "juli", "august",
+            "september", "oktober", "november", "december"]
+
+
+def dagens_dato(nu: datetime | None = None) -> str:
+    """Claude kender ikke dagens dato. Uden den kan et arrangement fra sidste
+    sommer ligne et kommende."""
+    nu = nu or datetime.now()
+    return f"I dag er det {nu.day}. {MAANEDER[nu.month - 1]} {nu.year}."
+
+
 def vurder(client: anthropic.Anthropic, item: RawItem, source: Source | None) -> Vurdering:
     prompt = (
-        "Vurdér dette opslag. Giv en score for lokal nyhedsværdi for borgere i Glostrup og Brøndby, "
-        "hvor 0 er irrelevant eller ren rutine (fx en enkelt landzonetilladelse, en kampopstilling, "
-        "en selskabsmeddelelse) og 10 er noget, de fleste i byen vil vide. Arrangementer, der er åbne for "
-        "alle, ligger typisk på 5-7. Kommunale beslutninger med bred betydning 7-9.\n\n"
+        dagens_dato() + " Arrangementer, der allerede har fundet sted, har score 0, medmindre de er "
+        "en nyhed i sig selv. Står der kun dag og måned, så antag det nærmeste år og tjek, om datoen er passeret.\n\n"
+        "Vurdér dette opslag. Giv en score for lokal nyhedsværdi for borgere i Hundested, "
+        "hvor 0 er irrelevant eller ren rutine (fx en kursusbeskrivelse, en udlejningsvare, en kampopstilling, "
+        "en selskabsmeddelelse, et overstået arrangement) og 10 er noget, de fleste i byen vil vide. "
+        "Arrangementer i Hundested, der er åbne for alle, ligger typisk på 5-7. Kommunale beslutninger "
+        "med betydning for Hundested 7-9. Nyheder fra andre kommuner end Halsnæs er 0. "
+        "Almindelige nyheder fra Frederiksværk er højst 3; kun det usædvanlige kan blive udlandsstof.\n\n"
         + _item_blok(item, source)
     )
     response = client.messages.parse(
@@ -171,6 +200,7 @@ def vurder(client: anthropic.Anthropic, item: RawItem, source: Source | None) ->
 def skriv_udkast(client: anthropic.Anthropic, item: RawItem, source: Source | None,
                  fuld_tekst: str, relaterede: list[RawItem], vurdering: Vurdering) -> Udkast:
     dele = [
+        dagens_dato() + " Skriv ikke om noget, der er overstået, som om det ligger forude.\n",
         "Skriv et artikeludkast ud fra materialet herunder. Brug kun oplysninger, der står i materialet. "
         f"Redaktionens vurdering: kategori {vurdering.kategori}, risiko {vurdering.risiko}.\n",
         "=== HOVEDKILDE ===",
@@ -207,6 +237,9 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
     db.save_assessment(item.id, vurdering.score, vurdering.kategori, vurdering.risiko, vurdering.begrundelse)
     resultat = RedaktionResultat(raw_item_id=item.id, titel=item.titel,
                                  score=vurdering.score, kategori=vurdering.kategori)
+    # Kilder med særligt fokus (prioritet 3, fx Folkely) får en lavere tærskel
+    if source and source.prioritet >= 3:
+        taerskel -= 1
     if vurdering.score < taerskel:
         resultat.sprunget_over = f"score {vurdering.score} under tærskel {taerskel}"
         return resultat
@@ -228,7 +261,7 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
         resume=udkast.resume,
         broedtekst=broedtekst,
         kategori=vurdering.kategori,
-        by=vurdering.by if vurdering.by != "Begge" else "Glostrup og Brøndby",
+        by=vurdering.by,
         tags=udkast.tags,
         kilder=kilder,
         usikkerheder=udkast.usikkerheder,
@@ -236,6 +269,7 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
         status=ReviewStatus.NEEDS_REVIEW,
         raw_item_ids=[item.id] + [r.id for r in relaterede],
         oprettet=datetime.now(),
+        **vaelg_billede(item, source),
     )
     resultat.artikel_id = db.save_article(article)
     return resultat
@@ -246,6 +280,8 @@ def koer_redaktion(db: Database, client: anthropic.Anthropic, limit: int = 10,
     """Behandl de nyeste opslag, der endnu ikke er vurderet."""
     sources = {s.id: s for s in db.get_sources(kun_aktive=False)}
     resultater = []
-    for item in db.get_unassessed_raw_items(limit=limit, source_id=source_id):
+    # Boliglister vises i deres egen boks og skal ikke vurderes som nyheder
+    udelad = [s.id for s in sources.values() if s.type == SourceType.BOLIGSIDEN]
+    for item in db.get_unassessed_raw_items(limit=limit, source_id=source_id, udelad=udelad):
         resultater.append(behandl_item(db, client, item, sources, taerskel=taerskel))
     return resultater

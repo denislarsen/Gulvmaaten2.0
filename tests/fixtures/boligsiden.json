@@ -1,0 +1,105 @@
+{
+ "cases": [
+  {
+   "caseUrl": "https://home.dk/sag/1790000397",
+   "priceCash": 3495000,
+   "casePrice": null,
+   "addressType": "villa",
+   "housingArea": 152,
+   "lotArea": 829,
+   "numberOfRooms": 4,
+   "yearBuilt": 1991,
+   "energyLabel": "c",
+   "daysOnMarket": 5,
+   "descriptionTitle": "Velholdt træhus fra 1991 - beliggende på toppen af hyggelig villavej",
+   "address": {
+    "roadName": "Peder Olsensvej",
+    "houseNumber": "18",
+    "cityName": "Hundested",
+    "zipCode": 3390
+   },
+   "realtor": {
+    "name": "home Hundested"
+   },
+   "defaultImage": {
+    "imageSources": [
+     {
+      "alt": "En grå træbygning med stor terrasse udført i beton, omkranset af bænke og borde. Omkring liggende grøn have med græsplæne. En grill placeret i forhaven.",
+      "size": {
+       "height": 80,
+       "width": 100
+      },
+      "url": "https://images.boligsiden.dk/images/case/e19130a2-c1bb-4537-b19c-07b6c3f476e6/100x80/cd7615e9-84c0-4b65-a47e-e815e70d970a.webp?h=98d2c43cdad8379a7eae88a3dd56b162f1fdf923a06cff624417d97e031979ea"
+     },
+     {
+      "alt": "En grå træbygning med stor terrasse udført i beton, omkranset af bænke og borde. Omkring liggende grøn have med græsplæne. En grill placeret i forhaven.",
+      "size": {
+       "height": 118,
+       "width": 143
+      },
+      "url": "https://images.boligsiden.dk/images/case/e19130a2-c1bb-4537-b19c-07b6c3f476e6/143x118/cd7615e9-84c0-4b65-a47e-e815e70d970a.webp?h=98d2c43cdad8379a7eae88a3dd56b162f1fdf923a06cff624417d97e031979ea"
+     },
+     {
+      "alt": "En grå træbygning med stor terrasse udført i beton, omkranset af bænke og borde. Omkring liggende grøn have med græsplæne. En grill placeret i forhaven.",
+      "size": {
+       "height": 200,
+       "width": 300
+      },
+      "url": "https://images.boligsiden.dk/images/case/e19130a2-c1bb-4537-b19c-07b6c3f476e6/300x200/cd7615e9-84c0-4b65-a47e-e815e70d970a.webp?h=98d2c43cdad8379a7eae88a3dd56b162f1fdf923a06cff624417d97e031979ea"
+     }
+    ]
+   }
+  },
+  {
+   "caseUrl": "https://www.edc.dk/sag/?sagsnr=33805353",
+   "priceCash": 1595000,
+   "casePrice": null,
+   "addressType": "condo",
+   "housingArea": 68,
+   "lotArea": null,
+   "numberOfRooms": 2,
+   "yearBuilt": 2005,
+   "energyLabel": "b",
+   "daysOnMarket": 7,
+   "descriptionTitle": "Ejerlejlighed i stueplan med en dejlig handy have og få hundrede meter til indkøb",
+   "address": {
+    "roadName": "Pilealle",
+    "houseNumber": "3A",
+    "cityName": "Hundested",
+    "zipCode": 3390
+   },
+   "realtor": {
+    "name": "EDC Poul Erik Bech"
+   },
+   "defaultImage": {
+    "imageSources": [
+     {
+      "alt": "En treetagers bygning med hvid facade og rødbrun tag, omringet af parkerede biler og grønne buske, beliggende i et boligområde med andre huse og træer i baggrunden.",
+      "size": {
+       "height": 80,
+       "width": 100
+      },
+      "url": "https://images.boligsiden.dk/images/case/659ff81f-8a7d-408d-99db-94ffba1c0264/100x80/1564844b-5158-4504-b11b-34768aa0825d.webp?h=93c724ae00f03c0761d57e3025cf9a470bd799f8d37d72405ed63a64786da391"
+     },
+     {
+      "alt": "En treetagers bygning med hvid facade og rødbrun tag, omringet af parkerede biler og grønne buske, beliggende i et boligområde med andre huse og træer i baggrunden.",
+      "size": {
+       "height": 118,
+       "width": 143
+      },
+      "url": "https://images.boligsiden.dk/images/case/659ff81f-8a7d-408d-99db-94ffba1c0264/143x118/1564844b-5158-4504-b11b-34768aa0825d.webp?h=93c724ae00f03c0761d57e3025cf9a470bd799f8d37d72405ed63a64786da391"
+     },
+     {
+      "alt": "En treetagers bygning med hvid facade og rødbrun tag, omringet af parkerede biler og grønne buske, beliggende i et boligområde med andre huse og træer i baggrunden.",
+      "size": {
+       "height": 200,
+       "width": 300
+      },
+      "url": "https://images.boligsiden.dk/images/case/659ff81f-8a7d-408d-99db-94ffba1c0264/300x200/1564844b-5158-4504-b11b-34768aa0825d.webp?h=93c724ae00f03c0761d57e3025cf9a470bd799f8d37d72405ed63a64786da391"
+     }
+    ]
+   }
+  }
+ ],
+ "totalHits": 2
+}

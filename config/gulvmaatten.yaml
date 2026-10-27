@@ -1,43 +1,60 @@
 # Grundkonfiguration for Gulvmåtten 2.0
+#
+# Gulvmåtten dækker Hundested. Resten af Halsnæs Kommune er ikke vores
+# stofområde, men Frederiksværk må gerne optræde en gang imellem under
+# kategorien "udlandsstof".
 
 byer:
-  - navn: Glostrup
-    kommune: Glostrup Kommune
-    postnumre: [2600]
-  - navn: Brøndby
-    kommune: Brøndby Kommune
-    postnumre: [2605, 2660, 2650]
+  - navn: Hundested
+    kommune: Halsnæs Kommune
+    postnumre: [3390]
+    lokalomraader: [Lynæs, Hundested Havn, Kikhavn, Torup, Dyssekilde, Nødebohuse, Amtsvejen]
+
+# Byer, der kun omtales som udlandsstof (med et glimt i øjet)
+udland:
+  - navn: Frederiksværk
+    postnumre: [3300]
+  - navn: Ølsted
+    postnumre: [3310]
 
 # Ord, der øger sandsynligheden for lokal relevans.
 # Bruges i filtrering og prioritering.
 noegleord:
-  - Glostrup
-  - Brøndby
-  - Brøndbyvester
-  - Brøndbyøster
-  - Brøndby Strand
-  - Hvissinge
-  - Vestegnen
+  - Hundested
+  - Lynæs
+  - Kikhavn
+  - Torup
+  - Dyssekilde
+  - Hundested Havn
+  - Kulturkajen
+  - Folkely
+  - Knud Rasmussen
+  - Rørvig-færgen
+  - Isefjorden
+  - futsal
+  - Hundested IK
   - byråd
-  - kommunalbestyrelse
   - høring
   - arrangement
   - koncert
-  - foredrag
   - loppemarked
   - generalforsamling
   - vejarbejde
 
-# Kategorier en artikel kan tildeles.
+# Kategorier en artikel kan tildeles. Rækkefølgen er rækkefølgen på forsiden.
 kategorier:
+  - nyheder
+  - havnen
+  - kultur
+  - folkely
+  - sport
+  - mad
   - arrangementer
   - kommune
-  - kultur
-  - sport
   - foreningsliv
   - byudvikling
-  - skole-og-institution
   - trafik
+  - udlandsstof
 
 # Emner, der altid kræver menneskelig godkendelse uanset kvalitetsscore.
 hoej_risiko:
@@ -46,6 +63,26 @@ hoej_risiko:
   - sundhed
   - navngivne-personer
   - kontroversielt
+  - anmeldelser
+
+# Madsektionen: hvor ofte der skrives om et nyt spisested, og hvor ofte
+# listen over spisesteder tjekkes for nye steder.
+mad:
+  ugens_spisested_hver_dage: 7
+  find_nye_spisesteder_hver_dage: 30
+  samme_sted_igen_efter_dage: 180
+
+# Billeder: kun fra kilder, hvor `billeder` ikke er "nej" i sources.yaml.
+# Alle billeder vises med kreditering ("Foto: <kilde>").
+billeder:
+  vis: true
+  kreditering_paakraevet: true
+
+# Annoncepladser på forsiden. Tom liste = ingen annoncer.
+annoncer:
+  - tekst: Din annonce her
+    undertekst: Gulvmåtten læses af hele Hundested
+    url: ""
 
 # Automatisk publicering er slået fra i første fase.
 automatisk_publicering: false

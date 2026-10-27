@@ -25,6 +25,7 @@ class SourceType(str, Enum):
     RSS = "rss"
     HTML = "html"
     SITEMAP = "sitemap"  # Hjemmesidens sitemap.xml, til sider hvor listen laves med JavaScript
+    BOLIGSIDEN = "boligsiden"  # Boligsidens JSON-søgning, til boksen med boliger til salg
 
 
 class ReviewStatus(str, Enum):
@@ -59,6 +60,8 @@ class Source:
     html: dict = field(default_factory=dict)
     sitemap: dict = field(default_factory=dict)
     regler: str = ""
+    prioritet: int = 1            # 3 = særligt fokus (fx Folkely)
+    billeder: bool = True         # Må kildens billeder vises (med kreditering)?
     aktiv: bool = True
     sidst_hentet: datetime | None = None
 
@@ -78,7 +81,17 @@ class Source:
             html=d.get("html") or {},
             sitemap=d.get("sitemap") or {},
             regler=d.get("regler", ""),
+            prioritet=int(d.get("prioritet", 1)),
+            billeder=_ja_nej(d.get("billeder", "ja")),
+            aktiv=bool(d.get("aktiv", True)),
         )
+
+
+def _ja_nej(v) -> bool:
+    """YAML læser `ja`/`nej` som tekst, men true/false som bool. Begge accepteres."""
+    if isinstance(v, bool):
+        return v
+    return str(v).strip().lower() in ("ja", "yes", "true", "1")
 
 
 @dataclass
@@ -93,6 +106,8 @@ class RawItem:
     fundet: datetime = field(default_factory=datetime.now)
     sidst_set: datetime = field(default_factory=datetime.now)
     content_hash: str = ""
+    billede_url: str = ""        # Billede fundet hos kilden, tomt hvis intet
+    data: dict = field(default_factory=dict)  # Strukturerede felter, fx pris og areal for en bolig
     id: int | None = None
 
     def __post_init__(self) -> None:
@@ -136,6 +151,8 @@ class Article:
     oprettet: datetime = field(default_factory=datetime.now)
     opdateret: datetime = field(default_factory=datetime.now)
     redaktoer_note: str = ""
+    billede_url: str = ""
+    billede_kredit: str = ""      # Fx "Foto: Hundested Havn". Skal vises sammen med billedet
     id: int | None = None
 
 

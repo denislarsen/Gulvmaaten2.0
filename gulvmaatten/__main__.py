@@ -11,6 +11,13 @@
     python -m gulvmaatten udkast          Vis artikeludkast, der afventer redaktør
     python -m gulvmaatten vis 3           Vis artikel nr. 3 i fuld længde
     python -m gulvmaatten vurderinger     Vis de seneste vurderinger
+    python -m gulvmaatten godkend 3       Godkend artikel nr. 3 (fx --karakter 5 for en anmeldelse)
+    python -m gulvmaatten afvis 3         Afvis artikel nr. 3
+    python -m gulvmaatten spisesteder find    Tjek havnens liste for nye spisesteder
+    python -m gulvmaatten spisesteder ugens   Skriv udkast til "Ugens spisested" (kræver API-nøgle)
+    python -m gulvmaatten site            Publicér godkendte artikler og byg hjemmesiden i site/
+    python -m gulvmaatten site --forhaandsvisning   Tag også udkast med
+    python -m gulvmaatten planlagt        Kør alt, der er forfaldent (til cron)
 """
 
 from __future__ import annotations
@@ -18,6 +25,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from pathlib import Path
 
 from .config import load_sources
 from .db import DEFAULT_DB, Database
@@ -64,16 +72,20 @@ def cmd_sources(db: Database, args) -> None:
         print(f"{s.id:40} {s.type.value:4} tillid {s.tillid}  sidst hentet: {hentet}{ver}")
 
 
-def cmd_redaktion(db: Database, args) -> None:
+def _claude_client():
     # Claude Codes skymiljø fjerner ANTHROPIC_API_KEY, så GULVMAATTEN_API_KEY bruges som alternativ.
     api_key = os.environ.get("GULVMAATTEN_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         sys.exit("Ingen API-nøgle. Sæt GULVMAATTEN_API_KEY i miljøets indstillinger (Environment variables).")
     import anthropic
 
+    return anthropic.Anthropic(api_key=api_key)
+
+
+def cmd_redaktion(db: Database, args) -> None:
     from .agent import koer_redaktion
 
-    client = anthropic.Anthropic(api_key=api_key)
+    client = _claude_client()
     resultater = koer_redaktion(db, client, limit=args.limit, taerskel=args.taerskel, source_id=args.source)
     if not resultater:
         print("Ingen nye opslag at vurdere.")
@@ -126,6 +138,79 @@ def cmd_vurderinger(db: Database, args) -> None:
         print(f"[{r['score']:2}] {r['kategori']:22} {r['risiko']:6} {r['titel']}\n     {r['begrundelse']}")
 
 
+def _hent_artikel(db: Database, article_id: int):
+    a = db.get_article(article_id)
+    if not a:
+        sys.exit(f"Ingen artikel med id {article_id}.")
+    return a
+
+
+def cmd_godkend(db: Database, args) -> None:
+    a = _hent_artikel(db, args.id)
+    if not a.kilder:
+        sys.exit("Artiklen har ingen kilder og kan ikke godkendes.")
+    if "[Udfyldes efter besøg" in a.broedtekst:
+        sys.exit("Anmeldelsen mangler redaktørens dom. Ret brødteksten, før den godkendes.")
+    if args.karakter:
+        a.tags = [t for t in a.tags if not t.startswith("karakter:")] + [f"karakter:{args.karakter}"]
+    a.status = ReviewStatus.APPROVED
+    db.save_article(a)
+    print(f"#{a.id} godkendt: {a.overskrift}")
+
+
+def cmd_afvis(db: Database, args) -> None:
+    a = _hent_artikel(db, args.id)
+    a.status = ReviewStatus.REJECTED
+    db.save_article(a)
+    print(f"#{a.id} afvist: {a.overskrift}")
+
+
+def cmd_spisesteder(db: Database, args) -> None:
+    from . import mad
+
+    if args.handling == "find":
+        nye = mad.find_nye_spisesteder(db)
+        if nye:
+            print("Nye spisesteder på havnens liste. Tilføj dem i config/steder.yaml:")
+            for n in nye:
+                print(f"  {n}")
+        else:
+            print("Ingen nye spisesteder på havnens liste.")
+    else:
+        artikel_id = mad.lav_ugens_spisested(db, _claude_client())
+        if artikel_id:
+            a = db.get_article(artikel_id)
+            print(f"Udkast #{artikel_id}: {a.overskrift}\n{a.redaktoer_note}")
+        else:
+            print("Alle spisesteder er omtalt for nylig.")
+
+
+def cmd_site(db: Database, args) -> None:
+    from .site import byg_site
+
+    filer = byg_site(db, Path(args.ud), forhaandsvisning=args.forhaandsvisning)
+    print(f"{len(filer)} filer skrevet i {args.ud}/. Åbn {args.ud}/index.html i en browser.")
+
+
+def cmd_planlagt(db: Database, args) -> None:
+    """Kør alt, der er forfaldent. Beregnet til at blive kaldt fra cron, fx hver time."""
+    from . import mad
+    from .agent import koer_redaktion
+
+    for r in fetch_all(db, kun_forfaldne=True):
+        print(r)
+    client = _claude_client()
+    resultater = koer_redaktion(db, client, limit=args.limit)
+    print(f"Redaktion: {len(resultater)} vurderet, {sum(1 for r in resultater if r.artikel_id)} udkast.")
+    indst = mad.mad_indstillinger()
+    if mad.er_forfalden(db, mad.KOERSEL_FIND_NYE, indst["find_nye_spisesteder_hver_dage"]):
+        nye = mad.find_nye_spisesteder(db)
+        print(f"Nye spisesteder: {', '.join(nye) if nye else 'ingen'}")
+    if mad.er_forfalden(db, mad.KOERSEL_UGENS, indst["ugens_spisested_hver_dage"]):
+        artikel_id = mad.lav_ugens_spisested(db, client)
+        print(f"Ugens spisested: udkast #{artikel_id}" if artikel_id else "Ugens spisested: intet nyt sted")
+
+
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(prog="gulvmaatten", description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -156,6 +241,23 @@ def main(argv: list[str] | None = None) -> None:
     vu = sub.add_parser("vurderinger")
     vu.add_argument("--limit", type=int, default=30)
     vu.set_defaults(fn=cmd_vurderinger)
+    g = sub.add_parser("godkend")
+    g.add_argument("id", type=int)
+    g.add_argument("--karakter", type=int, choices=range(1, 7), help="Gulvmåtter (1-6) til en anmeldelse")
+    g.set_defaults(fn=cmd_godkend)
+    a = sub.add_parser("afvis")
+    a.add_argument("id", type=int)
+    a.set_defaults(fn=cmd_afvis)
+    sp = sub.add_parser("spisesteder")
+    sp.add_argument("handling", choices=["find", "ugens"])
+    sp.set_defaults(fn=cmd_spisesteder)
+    st = sub.add_parser("site")
+    st.add_argument("--ud", default="site", help="Mappe til hjemmesiden")
+    st.add_argument("--forhaandsvisning", action="store_true", help="Tag udkast med, markeret UDKAST")
+    st.set_defaults(fn=cmd_site)
+    pl = sub.add_parser("planlagt")
+    pl.add_argument("--limit", type=int, default=20, help="Højst så mange opslag til redaktionen pr. kørsel")
+    pl.set_defaults(fn=cmd_planlagt)
 
     args = p.parse_args(argv)
     db = Database(args.db)

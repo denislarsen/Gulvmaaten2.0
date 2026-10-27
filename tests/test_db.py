@@ -34,3 +34,20 @@ def test_event(db):
     eid = db.save_event(e)
     e.aflyst = True
     assert db.save_event(e) == eid
+
+
+def test_gammel_database_faar_nye_kolonner(tmp_path):
+    import sqlite3
+
+    from gulvmaatten.db import Database
+
+    sti = tmp_path / "gammel.db"
+    con = sqlite3.connect(sti)
+    con.execute("CREATE TABLE raw_items (id INTEGER PRIMARY KEY, source_id TEXT, url TEXT, titel TEXT, tekst TEXT, "
+                "dato_tekst TEXT, fundet TEXT, sidst_set TEXT, content_hash TEXT, UNIQUE(source_id, url))")
+    con.commit()
+    con.close()
+    d = Database(sti)
+    kolonner = {r["name"] for r in d.conn.execute("PRAGMA table_info(raw_items)")}
+    assert {"billede_url", "data"} <= kolonner
+    d.close()
