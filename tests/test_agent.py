@@ -104,7 +104,7 @@ def test_aendret_opslag_vurderes_igen(db, html_source):
 
 
 def test_andet_medie_giver_tip_ikke_artikel(db, html_source):
-    html_source.kategori = "medie"
+    html_source.kun_tip = True
     db.upsert_source(html_source)
     item = _item(db, html_source, "Hun er den første kvinde på posten i Hundested")
     client = FakeClient([Vurdering(score=7, kategori="havnen", by="Hundested", risiko="low",

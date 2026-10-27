@@ -88,12 +88,16 @@ udfyldt. Karakteren gives i gulvmåtter (1-6) med `godkend --karakter`.
 
 ## Sociale medier
 
-Facebook og Instagram kan ikke hentes automatisk uden at bryde deres vilkår,
-og siderne kræver login. Profilerne for havnen, Oplev Hundested, Folkely og
-spisestederne står i `config/steder.yaml`, så de kan tjekkes manuelt.
-Mulige løsninger senere: få sideejerne til at give adgang via Meta Graph API,
-eller bed arrangørerne sende pressemeddelelser til en fast mailadresse, som
-systemet læser.
+Facebook og Instagram kræver login, og Meta tillader ikke automatisk
+indsamling. Vi bruger derfor rss.app, der laver sider og grupper om til
+RSS-feeds, som crawleren læser som alle andre feeds. Et nyt feed tilføjes
+med en linje i `config/sources.yaml`.
+
+- Facebook-gruppen "3390 Hundested" er med. Opslagene er skrevet af
+  privatpersoner og bliver derfor kun tips til redaktøren (`kun_tip: true`).
+  Navne og billeder fra gruppen bruges aldrig.
+- Sider fra havnen, Oplev Hundested, Folkely og spisestederne står i
+  `config/steder.yaml` og kan tilføjes på samme måde.
 
 ## Billeder
 

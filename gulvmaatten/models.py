@@ -62,6 +62,7 @@ class Source:
     regler: str = ""
     prioritet: int = 1            # 3 = særligt fokus (fx Folkely)
     billeder: bool = True         # Må kildens billeder vises (med kreditering)?
+    kun_tip: bool = False         # Andre medier og borgergrupper: giver tips, aldrig artikler
     aktiv: bool = True
     sidst_hentet: datetime | None = None
 
@@ -83,6 +84,7 @@ class Source:
             regler=d.get("regler", ""),
             prioritet=int(d.get("prioritet", 1)),
             billeder=_ja_nej(d.get("billeder", "ja")),
+            kun_tip=bool(d.get("kun_tip", False)),
             aktiv=bool(d.get("aktiv", True)),
         )
 

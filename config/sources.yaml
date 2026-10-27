@@ -10,6 +10,8 @@
 #   tillid      1-5, hvor 5 er en officiel kilde man kan stole fuldt på
 #   frekvens    Hvor ofte kilden bør hentes, i timer
 #   prioritet   1-3. 3 = særligt fokus, opslag vurderes en ekstra gang op
+#   kun_tip     true: opslag bliver tips til redaktøren, aldrig artikler
+#               (andre medier og borgergrupper på Facebook)
 #   billeder    ja: billeder må vises med kreditering
 #               nej: billeder må aldrig bruges (fx andre mediers fotos)
 #   aktiv       false = kilden er kendt, men hentes ikke (fx mangler URL)
@@ -27,8 +29,8 @@
 #   regler      Fritekst om særlige hensyn
 #
 # Kilderne er verificeret mod de rigtige hjemmesider den 27. oktober 2026.
-# Sociale medier (Facebook, Instagram) kan ikke hentes automatisk; de står
-# i config/steder.yaml og overvåges manuelt indtil videre.
+# Facebook og Instagram hentes via rss.app, som laver sider og grupper om til
+# RSS-feeds. Øvrige profiler står i config/steder.yaml.
 
 kilder:
   # --- Officielle kilder ------------------------------------------------------
@@ -160,6 +162,7 @@ kilder:
     tillid: 3
     frekvens: 6
     billeder: nej
+    kun_tip: true
     sprog: da
     verificeret: true
     html:
@@ -174,6 +177,26 @@ kilder:
       deres billeder. En historie herfra kræver en selvstændig kilde, fx
       kommunen eller arrangøren. Resuméet er avisens stednavn (fx "Hundested").
       Mange artikler er bag betalingsmur.
+
+  # --- Sociale medier (via rss.app) --------------------------------------------------
+
+  - id: fb-3390-hundested
+    navn: Facebook-gruppen "3390 Hundested"
+    url: https://rss.app/feeds/xe11V1dIpD8BrG1y.xml
+    type: rss
+    kategori: borgergruppe
+    by: Hundested
+    tillid: 2
+    frekvens: 6
+    billeder: nej
+    kun_tip: true
+    sprog: da
+    verificeret: true
+    regler: >
+      Borgernes egen gruppe. Opslagene er skrevet af privatpersoner og er tips,
+      ikke kilder. Navne og billeder fra gruppen bruges aldrig. Feedet laves af
+      rss.app (verificeret 27. oktober 2026; feedet indeholdt kun ét opslag
+      ved testen).
 
   # --- Sport -----------------------------------------------------------------------
 

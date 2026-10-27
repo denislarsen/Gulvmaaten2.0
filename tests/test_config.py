@@ -30,8 +30,9 @@ def test_kilder_kan_laeses_og_har_unikke_id():
 
 def test_andre_mediers_billeder_bruges_aldrig():
     for s in load_sources(ROOT / "config" / "sources.yaml"):
-        if s.kategori == "medie":
-            assert s.billeder is False, f"{s.id} er et medie og må ikke give billeder"
+        if s.kategori in ("medie", "borgergruppe"):
+            assert s.billeder is False, f"{s.id} må ikke give billeder"
+            assert s.kun_tip, f"{s.id} må kun give tips"
 
 
 def test_spisesteder_kan_laeses():

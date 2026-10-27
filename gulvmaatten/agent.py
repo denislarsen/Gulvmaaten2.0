@@ -45,7 +45,7 @@ Mediets regler, som du altid overholder:
 4. Høj risiko kræver menneske. Politik, kriminalitet, sundhed, navngivne privatpersoner og kontroversielle sager får risiko "high".
 5. Ingen private persondata. Kun navne, der optræder i en offentlig kilde med redaktionel relevans, fx en borgmester, en forfatter eller en foredragsholder.
 6. Sproget er dansk, neutralt, præcist og letlæst. Korte sætninger. Ingen reklamesprog, ingen udråbstegn, ingen vurderende tillægsord. Undtagelsen er udlandsstof, hvor en let ironisk tone er tilladt i overskriften.
-7. Andre medier er tips, ikke kilder. En historie fra Frederiksborg Amts Avis eller Halsnæs Avis må ikke skrives om. Den kræver en selvstændig kilde (kommunen, arrangøren, klubben). Har vi kun avisens version, skriver du det under usikkerheder.
+7. Andre medier og opslag fra privatpersoner i Facebook-grupper er tips, ikke kilder. Privatpersoner i grupper nævnes aldrig ved navn. En historie fra Frederiksborg Amts Avis eller Halsnæs Avis må ikke skrives om. Den kræver en selvstændig kilde (kommunen, arrangøren, klubben). Har vi kun avisens version, skriver du det under usikkerheder.
 
 Kategorier: nyheder, havnen, kultur, folkely, sport, mad, arrangementer, kommune, foreningsliv, byudvikling, trafik, udlandsstof.
 """
@@ -244,8 +244,9 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
         resultat.sprunget_over = f"score {vurdering.score} under tærskel {taerskel}"
         return resultat
 
-    if source and source.kategori == "medie":
-        # Andre mediers historier skrives ikke om. De bliver et tip til redaktøren.
+    if source and source.kun_tip:
+        # Andre mediers historier skrives ikke om, og borgeres opslag i Facebook-grupper
+        # er ikke kilder. De bliver et tip til redaktøren.
         resultat.artikel_id = gem_tip(db, item, source, vurdering)
         return resultat
 
@@ -285,7 +286,7 @@ def gem_tip(db: Database, item: RawItem, source: Source, vurdering: Vurdering) -
     return db.save_article(Article(
         overskrift=f"Tip: {item.titel}",
         resume=vurdering.begrundelse,
-        broedtekst=(f"{source.navn} har bragt historien. Den må ikke skrives om. Find en selvstændig kilde, "
+        broedtekst=(f"Fundet hos {source.navn}. Det må ikke skrives om eller citeres. Find en selvstændig kilde, "
                     "fx kommunen, arrangøren eller klubben, før der skrives en artikel."),
         kategori=vurdering.kategori,
         by=vurdering.by,

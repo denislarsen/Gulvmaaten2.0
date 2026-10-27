@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS sources (
     aktiv INTEGER DEFAULT 1,
     sidst_hentet TEXT,
     prioritet INTEGER DEFAULT 1,
-    billeder INTEGER DEFAULT 1
+    billeder INTEGER DEFAULT 1,
+    kun_tip INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS raw_items (
@@ -116,6 +117,7 @@ CREATE TABLE IF NOT EXISTS koersler (
 MIGRATIONER = [
     ("sources", "prioritet", "INTEGER DEFAULT 1"),
     ("sources", "billeder", "INTEGER DEFAULT 1"),
+    ("sources", "kun_tip", "INTEGER DEFAULT 0"),
     ("raw_items", "billede_url", "TEXT"),
     ("raw_items", "data", "TEXT"),
     ("articles", "billede_url", "TEXT"),
@@ -157,17 +159,17 @@ class Database:
         self.conn.execute(
             """INSERT INTO sources
                (id, navn, url, type, kategori, by, tillid, frekvens_timer, sprog, verificeret, html, sitemap, regler, aktiv,
-                prioritet, billeder)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                prioritet, billeder, kun_tip)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT(id) DO UPDATE SET
                  navn=excluded.navn, url=excluded.url, type=excluded.type, kategori=excluded.kategori,
                  by=excluded.by, tillid=excluded.tillid, frekvens_timer=excluded.frekvens_timer,
                  sprog=excluded.sprog, verificeret=excluded.verificeret, html=excluded.html,
                  sitemap=excluded.sitemap, regler=excluded.regler, aktiv=excluded.aktiv,
-                 prioritet=excluded.prioritet, billeder=excluded.billeder""",
+                 prioritet=excluded.prioritet, billeder=excluded.billeder, kun_tip=excluded.kun_tip""",
             (s.id, s.navn, s.url, s.type.value, s.kategori, s.by, s.tillid, s.frekvens_timer,
              s.sprog, int(s.verificeret), json.dumps(s.html), json.dumps(s.sitemap), s.regler, int(s.aktiv),
-             s.prioritet, int(s.billeder)),
+             s.prioritet, int(s.billeder), int(s.kun_tip)),
         )
         self.conn.commit()
 
@@ -190,7 +192,7 @@ class Database:
             sitemap=json.loads(r["sitemap"] or "{}"),
             regler=r["regler"] or "", aktiv=bool(r["aktiv"]),
             sidst_hentet=_parse_dt(r["sidst_hentet"]),
-            prioritet=r["prioritet"] or 1, billeder=bool(r["billeder"]),
+            prioritet=r["prioritet"] or 1, billeder=bool(r["billeder"]), kun_tip=bool(r["kun_tip"]),
         )
 
     def get_source(self, source_id: str) -> Source | None:
