@@ -68,8 +68,10 @@ python -m pytest                      # Tests (kræver ikke internet)
 ### Drift på Railway
 
 `python -m gulvmaatten server` viser hjemmesiden, kører de faste opgaver hver
-time og giver redaktøren en side på `/redaktion` (beskyttet af
-`GULVMAATTEN_REDAKTOER_KODE`). `Dockerfile` bygger det hele. Se
+time og giver redaktøren en side på `/redaktion`. Siden er privat, indtil
+`GULVMAATTEN_ADGANG=offentlig`: man logger ind med ejerens kode
+(`GULVMAATTEN_REDAKTOER_KODE`) eller et personligt link, som redaktøren laver
+under *Adgang* (eller med `python -m gulvmaatten adgang opret --navn ...`). `Dockerfile` bygger det hele. Se
 `docs/railway.md` for opsætningen trin for trin.
 
 ### Kørselsplan

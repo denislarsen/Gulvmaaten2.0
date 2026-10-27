@@ -124,6 +124,27 @@ CREATE TABLE IF NOT EXISTS publications (
     trukket_tilbage TEXT
 );
 
+-- Personlige adgangslinks. Selve linket gemmes ikke, kun et fingeraftryk af det.
+CREATE TABLE IF NOT EXISTS adgange (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    navn TEXT NOT NULL,
+    rolle TEXT NOT NULL,
+    token_hash TEXT UNIQUE NOT NULL,
+    oprettet TEXT NOT NULL,
+    sidst_brugt TEXT,
+    spaerret INTEGER DEFAULT 0
+);
+
+-- Indloggede browsere. adgang_id er tom, når ejeren er logget ind med koden.
+CREATE TABLE IF NOT EXISTS sessioner (
+    hash TEXT PRIMARY KEY,
+    adgang_id INTEGER REFERENCES adgange(id),
+    navn TEXT NOT NULL,
+    rolle TEXT NOT NULL,
+    oprettet TEXT NOT NULL,
+    udloeber TEXT NOT NULL
+);
+
 -- Hvornår faste opgaver (fx "Ugens spisested") sidst er kørt
 CREATE TABLE IF NOT EXISTS koersler (
     navn TEXT PRIMARY KEY,

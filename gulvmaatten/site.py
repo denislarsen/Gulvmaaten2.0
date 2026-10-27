@@ -528,8 +528,8 @@ def artikel_html(s: Side, nu: datetime) -> str:
 def byg_site(db: Database, ud: Path = SITE_DIR, forhaandsvisning: bool = False,
              nu: datetime | None = None) -> list[Path]:
     nu = nu or datetime.now()
-    if not forhaandsvisning:
-        publicer_godkendte(db, nu)
+    # Godkendte artikler publiceres altid; forhåndsvisningen viser derudover udkast
+    publicer_godkendte(db, nu)
     try:
         annoncer = load_settings().get("annoncer") or []
     except FileNotFoundError:

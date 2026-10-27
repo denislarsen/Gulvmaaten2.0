@@ -21,6 +21,7 @@
     python -m gulvmaatten kalender --vis  Vis de kommende arrangementer
     python -m gulvmaatten service         Skriv ugens servicehistorier (kalender og boligmarked)
     python -m gulvmaatten planlagt        Kør alt, der er forfaldent (til cron)
+    python -m gulvmaatten adgang opret --navn Hanne   Lav et personligt adgangslink
     python -m gulvmaatten server          Vis hjemmesiden, kør de faste opgaver hver time og
                                           giv redaktøren en side på /redaktion (fx på Railway)
 """
@@ -224,6 +225,23 @@ def cmd_planlagt(db: Database, args) -> None:
     koer_planlagt(db, _claude_client(), limit=args.limit)
 
 
+def cmd_adgang(db: Database, args) -> None:
+    from . import adgang
+
+    if args.handling == "opret":
+        if not args.navn:
+            sys.exit("Skriv et navn: adgang opret --navn 'Hanne'")
+        _, token = adgang.opret_adgang(db, args.navn, "redaktoer" if args.redaktoer else "laeser")
+        print(f"Link til {args.navn} (vises kun nu):\n{args.url.rstrip('/')}/adgang/{token}")
+    elif args.handling == "spaer":
+        adgang.spaer_adgang(db, args.id)
+        print(f"Link #{args.id} er spærret.")
+    else:
+        for r in adgang.adgange(db):
+            status = "spærret" if r["spaerret"] else f"sidst brugt {(r['sidst_brugt'] or 'aldrig')[:16]}"
+            print(f"#{r['id']:3} {r['navn']:25} {r['rolle']:10} {status}")
+
+
 def cmd_server(db: Database, args) -> None:
     from .server import start
 
@@ -283,6 +301,14 @@ def main(argv: list[str] | None = None) -> None:
     pl = sub.add_parser("planlagt")
     pl.add_argument("--limit", type=int, default=20, help="Højst så mange opslag til redaktionen pr. kørsel")
     pl.set_defaults(fn=cmd_planlagt)
+    ad = sub.add_parser("adgang", help="Personlige adgangslinks")
+    ad.add_argument("handling", choices=["opret", "liste", "spaer"])
+    ad.add_argument("--navn")
+    ad.add_argument("--redaktoer", action="store_true", help="Må også bruge /redaktion")
+    ad.add_argument("--url", default=os.environ.get("GULVMAATTEN_URL", "http://localhost:8000"),
+                    help="Sidens adresse, fx https://gulvmaatten.up.railway.app")
+    ad.add_argument("--id", type=int)
+    ad.set_defaults(fn=cmd_adgang)
     sv = sub.add_parser("server")
     sv.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     sv.add_argument("--hver", type=int, default=60, help="Minutter mellem de faste kørsler (0 = slået fra)")
