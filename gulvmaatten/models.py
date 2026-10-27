@@ -63,6 +63,8 @@ class Source:
     prioritet: int = 1            # 3 = særligt fokus (fx Folkely)
     billeder: bool = True         # Må kildens billeder vises (med kreditering)?
     kun_tip: bool = False         # Andre medier og borgergrupper: giver tips, aldrig artikler
+    kalender: bool = False        # Alle opslag gennemgås for arrangementer til kalenderen
+    kun_kalender: bool = False    # Bruges kun til kalenderen, ikke til nyheder (fx et spisesteds eventside)
     aktiv: bool = True
     sidst_hentet: datetime | None = None
 
@@ -85,6 +87,8 @@ class Source:
             prioritet=int(d.get("prioritet", 1)),
             billeder=_ja_nej(d.get("billeder", "ja")),
             kun_tip=bool(d.get("kun_tip", False)),
+            kalender=bool(d.get("kalender", False) or d.get("kun_kalender", False)),
+            kun_kalender=bool(d.get("kun_kalender", False)),
             aktiv=bool(d.get("aktiv", True)),
         )
 
@@ -133,6 +137,10 @@ class Event:
     arrangoer: str = ""
     aflyst: bool = False
     raw_item_ids: list[int] = field(default_factory=list)
+    url: str = ""                 # Hvor man læser mere eller køber billet
+    beskrivelse: str = ""         # Én sætning
+    billede_url: str = ""
+    source_id: str = ""
     id: int | None = None
 
 

@@ -33,7 +33,9 @@ CREATE TABLE IF NOT EXISTS sources (
     sidst_hentet TEXT,
     prioritet INTEGER DEFAULT 1,
     billeder INTEGER DEFAULT 1,
-    kun_tip INTEGER DEFAULT 0
+    kun_tip INTEGER DEFAULT 0,
+    kalender INTEGER DEFAULT 0,
+    kun_kalender INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS raw_items (
@@ -59,7 +61,8 @@ CREATE TABLE IF NOT EXISTS assessments (
     kategori TEXT,
     risiko TEXT,
     begrundelse TEXT,
-    tidspunkt TEXT NOT NULL
+    tidspunkt TEXT NOT NULL,
+    er_arrangement INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS events (
@@ -73,7 +76,19 @@ CREATE TABLE IF NOT EXISTS events (
     tilmelding TEXT,
     arrangoer TEXT,
     aflyst INTEGER DEFAULT 0,
-    raw_item_ids TEXT
+    raw_item_ids TEXT,
+    url TEXT,
+    beskrivelse TEXT,
+    billede_url TEXT,
+    source_id TEXT
+);
+
+-- Hvilke opslag (i hvilken version) der er gennemgået for arrangementer
+CREATE TABLE IF NOT EXISTS kalender_udtraek (
+    raw_item_id INTEGER NOT NULL REFERENCES raw_items(id),
+    content_hash TEXT NOT NULL,
+    tidspunkt TEXT NOT NULL,
+    PRIMARY KEY (raw_item_id, content_hash)
 );
 
 CREATE TABLE IF NOT EXISTS articles (
@@ -118,6 +133,13 @@ MIGRATIONER = [
     ("sources", "prioritet", "INTEGER DEFAULT 1"),
     ("sources", "billeder", "INTEGER DEFAULT 1"),
     ("sources", "kun_tip", "INTEGER DEFAULT 0"),
+    ("sources", "kalender", "INTEGER DEFAULT 0"),
+    ("sources", "kun_kalender", "INTEGER DEFAULT 0"),
+    ("assessments", "er_arrangement", "INTEGER DEFAULT 0"),
+    ("events", "url", "TEXT"),
+    ("events", "beskrivelse", "TEXT"),
+    ("events", "billede_url", "TEXT"),
+    ("events", "source_id", "TEXT"),
     ("raw_items", "billede_url", "TEXT"),
     ("raw_items", "data", "TEXT"),
     ("articles", "billede_url", "TEXT"),
@@ -159,17 +181,18 @@ class Database:
         self.conn.execute(
             """INSERT INTO sources
                (id, navn, url, type, kategori, by, tillid, frekvens_timer, sprog, verificeret, html, sitemap, regler, aktiv,
-                prioritet, billeder, kun_tip)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                prioritet, billeder, kun_tip, kalender, kun_kalender)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT(id) DO UPDATE SET
                  navn=excluded.navn, url=excluded.url, type=excluded.type, kategori=excluded.kategori,
                  by=excluded.by, tillid=excluded.tillid, frekvens_timer=excluded.frekvens_timer,
                  sprog=excluded.sprog, verificeret=excluded.verificeret, html=excluded.html,
                  sitemap=excluded.sitemap, regler=excluded.regler, aktiv=excluded.aktiv,
-                 prioritet=excluded.prioritet, billeder=excluded.billeder, kun_tip=excluded.kun_tip""",
+                 prioritet=excluded.prioritet, billeder=excluded.billeder, kun_tip=excluded.kun_tip,
+                 kalender=excluded.kalender, kun_kalender=excluded.kun_kalender""",
             (s.id, s.navn, s.url, s.type.value, s.kategori, s.by, s.tillid, s.frekvens_timer,
              s.sprog, int(s.verificeret), json.dumps(s.html), json.dumps(s.sitemap), s.regler, int(s.aktiv),
-             s.prioritet, int(s.billeder), int(s.kun_tip)),
+             s.prioritet, int(s.billeder), int(s.kun_tip), int(s.kalender), int(s.kun_kalender)),
         )
         self.conn.commit()
 
@@ -193,6 +216,7 @@ class Database:
             regler=r["regler"] or "", aktiv=bool(r["aktiv"]),
             sidst_hentet=_parse_dt(r["sidst_hentet"]),
             prioritet=r["prioritet"] or 1, billeder=bool(r["billeder"]), kun_tip=bool(r["kun_tip"]),
+            kalender=bool(r["kalender"]), kun_kalender=bool(r["kun_kalender"]),
         )
 
     def get_source(self, source_id: str) -> Source | None:
@@ -265,13 +289,14 @@ class Database:
 
     # --- Assessments (vurderinger) ------------------------------------------
 
-    def save_assessment(self, raw_item_id: int, score: int, kategori: str, risiko: str, begrundelse: str) -> None:
+    def save_assessment(self, raw_item_id: int, score: int, kategori: str, risiko: str, begrundelse: str,
+                        er_arrangement: bool = False) -> None:
         row = self.conn.execute("SELECT content_hash FROM raw_items WHERE id=?", (raw_item_id,)).fetchone()
         self.conn.execute(
-            "INSERT INTO assessments (raw_item_id, content_hash, score, kategori, risiko, begrundelse, tidspunkt) "
-            "VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO assessments (raw_item_id, content_hash, score, kategori, risiko, begrundelse, tidspunkt, "
+            "er_arrangement) VALUES (?,?,?,?,?,?,?,?)",
             (raw_item_id, row["content_hash"] if row else "", score, kategori, risiko, begrundelse,
-             _dt(datetime.now())),
+             _dt(datetime.now()), int(er_arrangement)),
         )
         self.conn.commit()
 
@@ -307,23 +332,67 @@ class Database:
     # --- Events ------------------------------------------------------------
 
     def save_event(self, e: Event) -> int:
+        felter = (e.titel, _dt(e.start), _dt(e.slut), e.sted, e.by, e.pris, e.tilmelding, e.arrangoer,
+                  int(e.aflyst), json.dumps(e.raw_item_ids), e.url, e.beskrivelse, e.billede_url, e.source_id)
         if e.id is None:
             cur = self.conn.execute(
-                """INSERT INTO events (titel, start, slut, sted, by, pris, tilmelding, arrangoer, aflyst, raw_item_ids)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                (e.titel, _dt(e.start), _dt(e.slut), e.sted, e.by, e.pris, e.tilmelding, e.arrangoer,
-                 int(e.aflyst), json.dumps(e.raw_item_ids)),
-            )
+                """INSERT INTO events (titel, start, slut, sted, by, pris, tilmelding, arrangoer, aflyst, raw_item_ids,
+                   url, beskrivelse, billede_url, source_id)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", felter)
             e.id = cur.lastrowid
         else:
             self.conn.execute(
                 """UPDATE events SET titel=?, start=?, slut=?, sted=?, by=?, pris=?, tilmelding=?, arrangoer=?,
-                   aflyst=?, raw_item_ids=? WHERE id=?""",
-                (e.titel, _dt(e.start), _dt(e.slut), e.sted, e.by, e.pris, e.tilmelding, e.arrangoer,
-                 int(e.aflyst), json.dumps(e.raw_item_ids), e.id),
-            )
+                   aflyst=?, raw_item_ids=?, url=?, beskrivelse=?, billede_url=?, source_id=? WHERE id=?""",
+                felter + (e.id,))
         self.conn.commit()
         return e.id
+
+    def erstat_events(self, raw_item_id: int, events: list[Event]) -> None:
+        """Arrangementer udledt af et opslag erstatter dem, opslaget gav sidst."""
+        self.conn.execute("DELETE FROM events WHERE json_extract(raw_item_ids, '$[0]') = ?", (raw_item_id,))
+        for e in events:
+            e.raw_item_ids = [raw_item_id] + [r for r in e.raw_item_ids if r != raw_item_id]
+            e.id = None
+            self.save_event(e)
+        self.conn.commit()
+
+    def kommende_events(self, fra: datetime, til: datetime | None = None, limit: int = 200) -> list[Event]:
+        """Arrangementer, der ikke er slut før `fra`, sorteret efter start."""
+        sql = "SELECT * FROM events WHERE COALESCE(slut, start) >= ?"
+        params: list = [_dt(fra)]
+        if til:
+            sql += " AND start < ?"
+            params.append(_dt(til))
+        sql += " ORDER BY start, id LIMIT ?"
+        params.append(limit)
+        return [self._row_to_event(r) for r in self.conn.execute(sql, params)]
+
+    @staticmethod
+    def _row_to_event(r: sqlite3.Row) -> Event:
+        return Event(
+            id=r["id"], titel=r["titel"], start=_parse_dt(r["start"]), slut=_parse_dt(r["slut"]),
+            sted=r["sted"] or "", by=r["by"] or "", pris=r["pris"] or "", tilmelding=r["tilmelding"] or "",
+            arrangoer=r["arrangoer"] or "", aflyst=bool(r["aflyst"]), raw_item_ids=json.loads(r["raw_item_ids"] or "[]"),
+            url=r["url"] or "", beskrivelse=r["beskrivelse"] or "", billede_url=r["billede_url"] or "",
+            source_id=r["source_id"] or "",
+        )
+
+    def opslag_til_kalender(self, limit: int = 50) -> list[RawItem]:
+        """Opslag, hvis nuværende version ikke er gennemgået for arrangementer, og som
+        enten kommer fra en kalenderkilde eller er vurderet som et arrangement."""
+        sql = """SELECT r.* FROM raw_items r JOIN sources s ON s.id = r.source_id
+                 WHERE (s.kalender = 1 OR EXISTS (SELECT 1 FROM assessments a WHERE a.raw_item_id = r.id
+                        AND a.content_hash = r.content_hash AND a.er_arrangement = 1 AND a.score >= 1))
+                   AND NOT EXISTS (SELECT 1 FROM kalender_udtraek k
+                                   WHERE k.raw_item_id = r.id AND k.content_hash = r.content_hash)
+                 ORDER BY r.fundet DESC, r.id DESC LIMIT ?"""
+        return [self._row_to_raw(r) for r in self.conn.execute(sql, (limit,))]
+
+    def marker_kalender_udtraek(self, item: RawItem) -> None:
+        self.conn.execute("INSERT OR IGNORE INTO kalender_udtraek (raw_item_id, content_hash, tidspunkt) VALUES (?,?,?)",
+                          (item.id, item.content_hash, _dt(datetime.now())))
+        self.conn.commit()
 
     # --- Articles ----------------------------------------------------------
 

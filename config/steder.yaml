@@ -43,8 +43,9 @@ spisesteder:
   - id: fjordens-cafe
     navn: Fjordens Café og Ishus
     adresse: Havnegade 16, 3390 Hundested
-    web: https://www.fjordenscafeogishus.dk/
-    note: Café, is og minigolf
+    note: >
+      Café, is og minigolf. Domænet fjordenscafeogishus.dk viser nu en
+      casinoside (tjekket 27. oktober 2026) og må ikke linkes til.
   - id: det-lille-kafferisteri
     navn: Det lille Kafferisteri
     adresse: Kajgaden 7D, 3390 Hundested

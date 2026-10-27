@@ -224,6 +224,50 @@ h1, h2, h3, .masthead, .teaser__titel, .topboks, .annonce, .bolig__pris {
 .annonce__under { font-family: var(--broed); font-size: 15px; opacity: .85; }
 .annonce--bred { margin: 22px 0; min-height: 120px; border: 6px double #fff; outline: 2px solid #1c1c1c; }
 
+/* Det sker: kalenderliste med datoblok */
+.det-sker { padding: 22px 0; border-bottom: 1px solid var(--linje); }
+.det-sker .sektion__titel { border-top-color: var(--blaa); color: var(--link); }
+.ev-liste { list-style: none; margin: 0 0 12px; padding: 0; }
+.ev { border-bottom: 1px dotted var(--linje); }
+.ev a { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; }
+.ev a:hover .ev__titel { text-decoration: underline; }
+.ev__dato {
+  flex: 0 0 46px;
+  display: flex; flex-direction: column; align-items: center;
+  border: 2px solid var(--blaek);
+  font-family: var(--overskrift); line-height: 1; padding: 3px 0 4px;
+  text-transform: uppercase; font-size: 11px; font-weight: 500;
+}
+.ev__dato b { font-size: 21px; font-weight: 700; }
+.ev__dato i { font-style: normal; color: var(--link); }
+.ev__tekst { display: flex; flex-direction: column; min-width: 0; }
+.ev__titel { font-family: var(--overskrift); font-weight: 600; font-size: 18px; line-height: 1.15; }
+.ev__meta { font-size: 14px; color: var(--graa); }
+.ev__aflyst { background: var(--lyserod-moerk); color: #fff; font-size: 11px; padding: 1px 5px; text-transform: uppercase; }
+
+/* Kalendersiden */
+.kalender { max-width: 760px; margin: 24px auto 0; }
+.kalender h1 { font-size: clamp(32px, 5vw, 50px); line-height: 1.05; margin: 0 0 8px; }
+.kalender__intro { color: var(--graa); margin: 0 0 18px; }
+.kal-dag h2 {
+  font-family: var(--overskrift); font-size: 15px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  border-top: 4px solid var(--blaek); padding-top: 6px; margin: 22px 0 4px;
+}
+
+/* Folkely: smalt bånd med højst to historier */
+.folkely {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--lyserod); padding: 10px 14px; margin: 22px 0 0;
+}
+.folkely__navn {
+  font-family: var(--overskrift); font-size: 26px; font-weight: 700; color: var(--lyserod-moerk);
+  margin: 0; letter-spacing: -0.01em;
+}
+.folkely__punkt { display: flex; align-items: center; gap: 10px; flex: 1 1 0; min-width: 0; }
+.folkely__punkt img { width: 64px; height: 48px; object-fit: cover; flex: 0 0 auto; }
+.folkely__punkt span { font-family: var(--overskrift); font-weight: 600; font-size: 17px; line-height: 1.15; }
+.folkely__punkt:hover span { text-decoration: underline; }
+
 /* --- Artikelside ------------------------------------------------------------- */
 
 .artikel { max-width: 720px; margin: 24px auto 0; }
@@ -282,6 +326,7 @@ h1, h2, h3, .masthead, .teaser__titel, .topboks, .annonce, .bolig__pris {
   .kort h3 { font-size: 20px; }
   .kort p { display: none; }
   .sektion--folkely { margin: 0 -16px; padding: 18px 16px; }
+  .folkely { flex-direction: column; align-items: stretch; gap: 10px; }
   .boliger__liste { gap: 12px; }
   .bolig__pris { font-size: 19px; }
 }

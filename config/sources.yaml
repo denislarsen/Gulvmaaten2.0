@@ -14,6 +14,8 @@
 #               (andre medier og borgergrupper på Facebook)
 #   billeder    ja: billeder må vises med kreditering
 #               nej: billeder må aldrig bruges (fx andre mediers fotos)
+#   kalender    true: alle opslag gennemgås for arrangementer til kalenderen
+#   kun_kalender true: bruges kun til kalenderen, ikke til nyheder
 #   aktiv       false = kilden er kendt, men hentes ikke (fx mangler URL)
 #   sprog       da
 #   verificeret true når kilden er testet mod den rigtige hjemmeside
@@ -108,9 +110,104 @@ kilder:
     tillid: 4
     frekvens: 24
     billeder: ja
+    kalender: true
     sprog: da
     verificeret: true
     regler: Foreningsnyheder. Kapsejlads hører under sport.
+
+  # --- Kalender: bibliotek og spisesteder ---------------------------------------
+
+  - id: hundested-bibliotek
+    navn: Hundested Bibliotek, arrangementer
+    url: https://bibliotekerne.halsnaes.dk/arrangementer?f%5B0%5D=filial%3A70
+    type: html
+    kategori: bibliotek
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    billeder: ja
+    kalender: true
+    sprog: da
+    verificeret: true
+    html:
+      opslag: li.content-list__item
+      titel: h2.content-list-item__title
+      link: a
+      dato: .content-list-item__content-bottom-container
+      resume: .content-list-item__description
+      billede: img
+    regler: >
+      Halsnæs Bibliotekerne filtreret på Hundested Bibliotek. Datoen indeholder
+      også sted og pris. Faste tilbud (advokatvagt, lektiecafé) er kalenderstof,
+      ikke nyheder.
+
+  - id: halsnaes-bryghus-kalender
+    navn: Halsnæs Bryghus, kalender
+    url: https://www.halsbryg.dk/kalenderen/
+    type: html
+    kategori: spisested
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    billeder: ja
+    kun_kalender: true
+    sprog: da
+    verificeret: true
+    html:
+      hel_side: true
+      resume: main
+    regler: Banko, fredagsbar, koncerter og andre arrangementer på bryghuset.
+
+  - id: spisehuset-knud
+    navn: Spisehuset Knud
+    url: https://www.knud.biz/
+    type: html
+    kategori: spisested
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    billeder: ja
+    kun_kalender: true
+    sprog: da
+    verificeret: true
+    html:
+      hel_side: true
+      resume: body
+    regler: Forsiden viser menuer og arrangementer (vinskole, vildtmiddage, nytårsbrunch).
+
+  - id: lynaes-surfcenter-kalender
+    navn: Lynæs Surfcenter og Madbaren, kalender
+    url: https://surfcenter.dk/kalender/
+    type: html
+    kategori: spisested
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    billeder: ja
+    kun_kalender: true
+    sprog: da
+    verificeret: true
+    html:
+      hel_side: true
+      resume: body
+    regler: Kommende events i Lynæs, fx julemarked og julefrokoster på Madbaren.
+
+  - id: knud-rasmussens-hus
+    navn: Knud Rasmussens Hus, det sker
+    url: https://knudrasmus.dk/det-sker
+    type: html
+    kategori: kultur
+    by: Hundested
+    tillid: 5
+    frekvens: 48
+    billeder: ja
+    kun_kalender: true
+    sprog: da
+    verificeret: true
+    html:
+      hel_side: true
+      resume: body
+    regler: Museets egne arrangementer og omvisninger.
 
   # --- Kultur -------------------------------------------------------------------
 
@@ -240,7 +337,7 @@ kilder:
 
   - id: boliger-til-salg
     navn: Boliger til salg i 3390 Hundested
-    url: https://api.boligsiden.dk/search/cases?zipCodes=3390&per_page=12&sortBy=timeOnMarket&sortAscending=true
+    url: https://api.boligsiden.dk/search/cases?zipCodes=3390&per_page=100&sortBy=timeOnMarket&sortAscending=true
     type: boligsiden
     kategori: bolig
     by: Hundested

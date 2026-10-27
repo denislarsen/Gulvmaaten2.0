@@ -22,8 +22,9 @@ from pathlib import Path
 
 from .config import load_settings
 from .db import Database
+from .kalender import fremhaevede, kalender_for
 from .mad import karakter
-from .models import Article, Publication, RawItem, ReviewStatus
+from .models import Article, Event, Publication, RawItem, ReviewStatus
 
 SITE_DIR = Path("site")
 BOLIG_KILDE = "boliger-til-salg"
@@ -103,6 +104,7 @@ class Forside:
     sider: list[Side]
     boliger: list[RawItem] = field(default_factory=list)
     annoncer: list[dict] = field(default_factory=list)
+    kalender: list[Event] = field(default_factory=list)
 
 
 # --- Udvælgelse ---------------------------------------------------------------------
@@ -163,17 +165,22 @@ def fordel(forside: Forside) -> dict:
     alle = [s for s in forside.sider if s.sektion != "udland"]
     med_billede = [s for s in alle if s.artikel.billede_url]
     mad = [s for s in forside.sider if s.sektion == "mad"]
+    folkely = [s for s in forside.sider if s.sektion == "folkely"]
     pladser = {
         "mad": tag(mad, 1),
-        # Folkely har særligt fokus og får sit eget bånd før resten fordeles
-        "folkely": tag([s for s in forside.sider if s.sektion == "folkely"], 3),
-        "tophistorie": tag(med_billede or alle, 1),
+        # Den vigtigste Folkely-historie kan blive tophistorie; resten får et lille bånd
+        # Folkely må kun blive tophistorie, når der ikke er andet med billede
+        "tophistorie": tag([s for s in med_billede if s.sektion != "folkely"] or med_billede or alle, 1),
     }
-    pladser["topstrimmel"] = tag([s for s in alle if s.sektion != "mad"], 2)
-    pladser["sidekolonne"] = tag([s for s in alle if s.sektion != "mad"], 2)
-    for sek, antal in (("havn", 6), ("sport", 3), ("nyheder", 6), ("udland", 2)):
+    pladser["folkely"] = tag(folkely, 2)
+    pladser["sidekolonne"] = tag([s for s in alle if s.sektion not in ("mad", "folkely")], 2)
+    # Nyheder er alt, der ikke har sin egen sektion
+    pladser["nyheder"] = tag([s for s in alle if s.sektion == "nyheder"], 8)
+    for sek, antal in (("havn", 6), ("sport", 3), ("udland", 3)):
         pladser[sek] = tag([s for s in forside.sider if s.sektion == sek], antal)
-    pladser["oevrige"] = tag([s for s in alle if s.sektion != "mad"], 8)
+    # Er der ikke nok nyheder, fyldes der op med det, der er tilbage
+    if len(pladser["nyheder"]) < 4:
+        pladser["nyheder"] += tag([s for s in alle if s.sektion not in ("mad", "folkely")], 4 - len(pladser["nyheder"]))
     return pladser
 
 
@@ -250,6 +257,63 @@ def _avishoved(nu: datetime, lille: bool = False, rod: str = "") -> str:
             f'<span class="hoved__info">Hundested · gratis · ingen betalingsmur</span></div>'
             f'<a class="masthead" href="{rod}index.html">Gulvmåtten</a>'
             f'<div class="blaa-streg"></div></header>')
+
+
+UGEDAGE = ["man", "tir", "ons", "tor", "fre", "lør", "søn"]
+UGEDAGE_LANG = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag"]
+
+
+def _klokken(e: Event) -> str:
+    if e.start.hour == 0 and e.start.minute == 0:
+        return ""
+    tid = f"{e.start:%H.%M}"
+    if e.slut and e.slut.date() == e.start.date() and (e.slut.hour or e.slut.minute):
+        tid += f"–{e.slut:%H.%M}"
+    return tid
+
+
+def _event_raekke(e: Event, vis_dato: bool = True) -> str:
+    dato = (f'<span class="ev__dato"><b>{e.start.day}</b>{MAANEDER[e.start.month - 1][:3]}'
+            f'<i>{UGEDAGE[e.start.weekday()]}</i></span>') if vis_dato else ""
+    pris = e.pris if len(e.pris) <= 24 else ""
+    meta = " · ".join(x for x in [_klokken(e), e.sted.split(",")[0], pris] if x)
+    aflyst = '<span class="ev__aflyst">Aflyst</span> ' if e.aflyst else ""
+    return (f'<li class="ev"><a href="{escape(e.url)}" rel="noopener">{dato}'
+            f'<span class="ev__tekst"><span class="ev__titel">{aflyst}{escape(e.titel)}</span>'
+            f'<span class="ev__meta">{escape(meta)}</span></span></a></li>')
+
+
+def _det_sker(events: list[Event], nu: datetime, antal: int = 9) -> str:
+    if not events:
+        return ""
+    raekker = "".join(_event_raekke(e) for e in events[:antal])
+    return (f'<section class="det-sker"><h2 class="sektion__titel">Det sker i Hundested</h2>'
+            f'<ul class="ev-liste">{raekker}</ul>'
+            f'<a class="laes" href="kalender.html">Hele kalenderen ({len(events)} arrangementer)</a></section>')
+
+
+def _event_teaser(e: Event) -> str:
+    dag = f"{UGEDAGE_LANG[e.start.weekday()]} {e.start.day}. {MAANEDER[e.start.month - 1]}"
+    tid = _klokken(e)
+    return (f'<a class="teaser" href="{escape(e.url)}" rel="noopener">'
+            f'<span class="teaser__titel">{escape(e.titel)}</span>'
+            f'<span class="kicker">Det sker · {dag}{" kl. " + tid if tid else ""}</span></a>')
+
+
+def kalender_html(events: list[Event], nu: datetime) -> str:
+    dage: dict = {}
+    for e in events:
+        dage.setdefault(e.start.date(), []).append(e)
+    blokke = []
+    for d, evs in dage.items():
+        overskrift = f"{UGEDAGE_LANG[d.weekday()]} {d.day}. {MAANEDER[d.month - 1]}"
+        blokke.append(f'<section class="kal-dag"><h2>{overskrift}</h2><ul class="ev-liste">'
+                      + "".join(_event_raekke(e, vis_dato=False) for e in evs) + "</ul></section>")
+    krop = (f'{_avishoved(nu, lille=True)}<div class="kalender"><h1>Det sker i Hundested</h1>'
+            f'<p class="kalender__intro">Arrangementer fra biblioteket, spisestederne, havnen, foreningerne og '
+            f'kulturstederne. Tjek altid hos arrangøren, før du går. Klik på et arrangement for at se kilden.</p>'
+            f'{"".join(blokke) or "<p>Ingen kommende arrangementer.</p>"}</div>{_fod()}')
+    return _dokument("Det sker i Hundested · Gulvmåtten", krop)
 
 
 def _topboks(forside: Forside, mad: list[Side]) -> str:
@@ -329,6 +393,18 @@ def _udland(sider: list[Side]) -> str:
             f'<p class="udland__stempel">Nyt fra Frederiksværk og omegn</p><ul>{punkter}</ul></section>')
 
 
+def _folkely(sider: list[Side]) -> str:
+    """Et smalt bånd med højst to historier."""
+    if not sider:
+        return ""
+    punkter = "".join(
+        f'<a class="folkely__punkt" href="{s.href}">'
+        + (f'<img src="{escape(s.artikel.billede_url)}" alt="" loading="lazy" referrerpolicy="no-referrer">'
+           if s.artikel.billede_url else "")
+        + f'<span>{_udkast_maerke(s)}{escape(s.artikel.overskrift)}</span></a>' for s in sider)
+    return f'<section class="folkely"><h2 class="folkely__navn">Folkely</h2>{punkter}</section>'
+
+
 def _fod(rod: str = "") -> str:
     return (f'<footer class="fod"><p><b>Gulvmåtten</b> er et lokalt netmedie for Hundested. Navnet kommer fra '
             f'den gamle gratisavis, som mange brugte som gulvmåtte.</p>'
@@ -338,7 +414,7 @@ def _fod(rod: str = "") -> str:
 
 def forside_html(forside: Forside, nu: datetime) -> str:
     p = fordel(forside)
-    top = "".join(_teaser(s) for s in p["topstrimmel"])
+    top = "".join(_event_teaser(e) for e in fremhaevede(forside.kalender))
     side = "".join(_teaser(s) for s in p["sidekolonne"])
     tophistorie = (_tophistorie(p["tophistorie"][0]) + f'<aside class="top__side">{side}</aside></section>'
                    if p["tophistorie"] else "")
@@ -350,13 +426,14 @@ def forside_html(forside: Forside, nu: datetime) -> str:
         f'<div class="topstrimmel">{top}{_topboks(forside, p["mad"])}</div>'
         f'{_avishoved(nu)}'
         f'{tophistorie}'
-        f'{_sektion("folkely", p["folkely"], intro="Sommerens hyggeligste hemmelighed, året rundt.")}'
+        f'<div class="to-kolonner to-kolonner--bred">'
+        f'{_sektion("nyheder", p["nyheder"])}{_det_sker(forside.kalender, nu)}</div>'
+        f'{_folkely(p["folkely"])}'
         f'{_sektion("havn", p["havn"])}'
         f'<div class="to-kolonner">{_mad_boks(p["mad"])}{_boliger(forside.boliger)}</div>'
         f'{_sektion("sport", p["sport"])}'
         f'{annonce}'
-        f'<div class="to-kolonner to-kolonner--bred">'
-        f'{_sektion("nyheder", p["nyheder"] + p["oevrige"])}{_udland(p["udland"])}</div>'
+        f'{_udland(p["udland"])}'
         f'{_fod()}'
     )
     return _dokument("Gulvmåtten", krop)
@@ -406,13 +483,18 @@ def byg_site(db: Database, ud: Path = SITE_DIR, forhaandsvisning: bool = False,
         annoncer = load_settings().get("annoncer") or []
     except FileNotFoundError:
         annoncer = []
-    forside = Forside(sider=saml_sider(db, forhaandsvisning), boliger=nyeste_boliger(db), annoncer=annoncer)
+    kalender = kalender_for(db, nu)
+    forside = Forside(sider=saml_sider(db, forhaandsvisning), boliger=nyeste_boliger(db), annoncer=annoncer,
+                      kalender=kalender)
     # Ryd gamle artikelsider, så tilbagetrukne artikler ikke ligger tilbage
     shutil.rmtree(ud / "artikel", ignore_errors=True)
     (ud / "artikel").mkdir(parents=True, exist_ok=True)
     skrevet = []
     sti = ud / "index.html"
     sti.write_text(forside_html(forside, nu), encoding="utf-8")
+    skrevet.append(sti)
+    sti = ud / "kalender.html"
+    sti.write_text(kalender_html(kalender, nu), encoding="utf-8")
     skrevet.append(sti)
     for s in forside.sider:
         sti = ud / s.href

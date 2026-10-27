@@ -30,7 +30,7 @@ from .fetch import hent
 from .models import Article, RawItem, ReviewStatus, RiskLevel, Source, SourceType
 
 MODEL = "claude-opus-5-5"
-SCORE_TAERSKEL = 5  # Opslag med lavere score bliver ikke til artikler
+SCORE_TAERSKEL = 4  # Opslag med lavere score bliver ikke til artikler
 
 SYSTEM_REDAKTION = """Du er redaktionssekretær på Gulvmåtten, et lokalt netmedie for Hundested i Halsnæs Kommune. Navnet kommer fra den gamle gratisavis i Hundested, som mange brugte som gulvmåtte.
 
@@ -234,7 +234,8 @@ def behandl_item(db: Database, client: anthropic.Anthropic, item: RawItem,
     """Kør hele pipelinen for ét opslag. `hent_tekst` kan byttes ud i tests."""
     source = sources.get(item.source_id)
     vurdering = vurder(client, item, source)
-    db.save_assessment(item.id, vurdering.score, vurdering.kategori, vurdering.risiko, vurdering.begrundelse)
+    db.save_assessment(item.id, vurdering.score, vurdering.kategori, vurdering.risiko, vurdering.begrundelse,
+                       er_arrangement=vurdering.er_arrangement)
     resultat = RedaktionResultat(raw_item_id=item.id, titel=item.titel,
                                  score=vurdering.score, kategori=vurdering.kategori)
     # Kilder med særligt fokus (prioritet 3, fx Folkely) får en lavere tærskel
@@ -303,8 +304,8 @@ def koer_redaktion(db: Database, client: anthropic.Anthropic, limit: int = 10,
     """Behandl de nyeste opslag, der endnu ikke er vurderet."""
     sources = {s.id: s for s in db.get_sources(kun_aktive=False)}
     resultater = []
-    # Boliglister vises i deres egen boks og skal ikke vurderes som nyheder
-    udelad = [s.id for s in sources.values() if s.type == SourceType.BOLIGSIDEN]
+    # Boliglister og rene kalenderkilder vises i deres egne bokse og vurderes ikke som nyheder
+    udelad = [s.id for s in sources.values() if s.type == SourceType.BOLIGSIDEN or s.kun_kalender]
     for item in db.get_unassessed_raw_items(limit=limit, source_id=source_id, udelad=udelad):
         resultater.append(behandl_item(db, client, item, sources, taerskel=taerskel))
     return resultater

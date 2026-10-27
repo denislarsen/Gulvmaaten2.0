@@ -17,6 +17,9 @@
     python -m gulvmaatten spisesteder ugens   Skriv udkast til "Ugens spisested" (kræver API-nøgle)
     python -m gulvmaatten site            Publicér godkendte artikler og byg hjemmesiden i site/
     python -m gulvmaatten site --forhaandsvisning   Tag også udkast med
+    python -m gulvmaatten kalender        Find arrangementer til kalenderen (kræver API-nøgle)
+    python -m gulvmaatten kalender --vis  Vis de kommende arrangementer
+    python -m gulvmaatten service         Skriv ugens servicehistorier (kalender og boligmarked)
     python -m gulvmaatten planlagt        Kør alt, der er forfaldent (til cron)
 """
 
@@ -187,6 +190,27 @@ def cmd_spisesteder(db: Database, args) -> None:
             print("Alle spisesteder er omtalt for nylig.")
 
 
+def cmd_kalender(db: Database, args) -> None:
+    from datetime import datetime
+
+    from .kalender import koer_kalender
+
+    if not args.vis:
+        for r in koer_kalender(db, _claude_client(), limit=args.limit):
+            print(f"{r.antal:3} arrangementer  {r.titel[:70]}")
+    for e in db.kommende_events(datetime.now()):
+        tid = e.start.strftime("%d/%m %H:%M") if e.start.hour or e.start.minute else e.start.strftime("%d/%m")
+        print(f"{tid:12} {e.titel[:50]:50} {e.sted[:30]}{'  AFLYST' if e.aflyst else ''}")
+
+
+def cmd_service(db: Database, args) -> None:
+    from . import service
+
+    for navn, fn in (("Det sker i ugen", service.det_sker_i_ugen), ("Boligmarkedet", service.boligmarkedet)):
+        artikel_id = fn(db)
+        print(f"{navn}: udkast #{artikel_id}" if artikel_id else f"{navn}: ikke nok data")
+
+
 def cmd_site(db: Database, args) -> None:
     from .site import byg_site
 
@@ -199,15 +223,25 @@ def cmd_planlagt(db: Database, args) -> None:
     from . import mad
     from .agent import koer_redaktion
 
+    from .kalender import koer_kalender
+
     for r in fetch_all(db, kun_forfaldne=True):
         print(r)
     client = _claude_client()
     resultater = koer_redaktion(db, client, limit=args.limit)
     print(f"Redaktion: {len(resultater)} vurderet, {sum(1 for r in resultater if r.artikel_id)} udkast.")
+    kal = koer_kalender(db, client, limit=args.limit)
+    print(f"Kalender: {len(kal)} opslag læst, {sum(r.antal for r in kal)} arrangementer fundet.")
     indst = mad.mad_indstillinger()
     if mad.er_forfalden(db, mad.KOERSEL_FIND_NYE, indst["find_nye_spisesteder_hver_dage"]):
         nye = mad.find_nye_spisesteder(db)
         print(f"Nye spisesteder: {', '.join(nye) if nye else 'ingen'}")
+    from . import service
+
+    for koersel, fn in ((service.KOERSEL_UGEN, service.det_sker_i_ugen), (service.KOERSEL_BOLIG, service.boligmarkedet)):
+        if mad.er_forfalden(db, koersel, 7):
+            artikel_id = fn(db)
+            print(f"{koersel}: udkast #{artikel_id}" if artikel_id else f"{koersel}: ikke nok data")
     if mad.er_forfalden(db, mad.KOERSEL_UGENS, indst["ugens_spisested_hver_dage"]):
         artikel_id = mad.lav_ugens_spisested(db, client)
         print(f"Ugens spisested: udkast #{artikel_id}" if artikel_id else "Ugens spisested: intet nyt sted")
@@ -231,7 +265,7 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("sources").set_defaults(fn=cmd_sources)
     r = sub.add_parser("redaktion")
     r.add_argument("--limit", type=int, default=10, help="Højst så mange opslag (hvert koster et API-kald)")
-    r.add_argument("--taerskel", type=int, default=5, help="Mindste score for at skrive udkast")
+    r.add_argument("--taerskel", type=int, default=4, help="Mindste score for at skrive udkast")
     r.add_argument("--source", help="Kun opslag fra denne kilde")
     r.set_defaults(fn=cmd_redaktion)
     u = sub.add_parser("udkast")
@@ -253,6 +287,11 @@ def main(argv: list[str] | None = None) -> None:
     sp = sub.add_parser("spisesteder")
     sp.add_argument("handling", choices=["find", "ugens"])
     sp.set_defaults(fn=cmd_spisesteder)
+    k = sub.add_parser("kalender")
+    k.add_argument("--vis", action="store_true", help="Vis kun kalenderen, kald ikke Claude")
+    k.add_argument("--limit", type=int, default=30)
+    k.set_defaults(fn=cmd_kalender)
+    sub.add_parser("service").set_defaults(fn=cmd_service)
     st = sub.add_parser("site")
     st.add_argument("--ud", default="site", help="Mappe til hjemmesiden")
     st.add_argument("--forhaandsvisning", action="store_true", help="Tag udkast med, markeret UDKAST")

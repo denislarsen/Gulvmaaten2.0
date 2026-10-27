@@ -75,6 +75,27 @@ spisesteder hver 30. dag. Frekvenserne står under `mad:` i
 0 * * * * cd /sti/til/gulvmaaten2.0 && python -m gulvmaatten planlagt >> data/planlagt.log 2>&1
 ```
 
+## Kalenderen: "Det sker i Hundested"
+
+`python -m gulvmaatten kalender` lader Claude læse opslag og sider og trække de
+konkrete arrangementer ud (titel, tid, sted, pris). Kilder:
+
+- Hundested Bibliotek (Halsnæs Bibliotekerne, filtreret på Hundested)
+- Eventsiderne hos Halsnæs Bryghus, Spisehuset Knud, Lynæs Surfcenter og
+  Knud Rasmussens Hus (`kun_kalender: true`, de bliver ikke til nyheder)
+- Alle andre opslag, som redaktionen vurderer som et arrangement
+
+Kalenderen er service og publiceres uden godkendelse. Hvert arrangement
+linker til kilden. Når en kildeside ændrer sig, læses den igen. Forsiden viser
+de næste ni arrangementer; `site/kalender.html` viser dem alle.
+
+## Servicehistorier
+
+`python -m gulvmaatten service` skriver to faste historier ud fra data:
+"Det sker i Hundested i uge N" (fra kalenderen) og "N boliger til salg i
+Hundested" (fra Boligsiden). De sættes sammen af en skabelon, ikke af Claude,
+og lægges som udkast. `planlagt` laver dem én gang om ugen.
+
 ## Madsektionen
 
 "Ugens spisested" tager spisestederne i `config/steder.yaml` på skift. Steder,

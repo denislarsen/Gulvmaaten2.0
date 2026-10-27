@@ -149,7 +149,7 @@ def parse_hel_side(source: Source, content: str) -> list[RawItem]:
         tag.decompose()
     titel = soup.title.get_text(strip=True) if soup.title else source.navn
     tekst = _first_text(soup, source.html.get("resume", "")) or (soup.body.get_text(" ", strip=True) if soup.body else "")
-    return [RawItem(source_id=source.id, url=source.url, titel=titel, tekst=tekst[:8000],
+    return [RawItem(source_id=source.id, url=source.url, titel=titel, tekst=tekst[:15000],
                     billede_url=_og_image(soup, source.url))]
 
 
