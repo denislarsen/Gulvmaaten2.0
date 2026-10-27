@@ -27,6 +27,12 @@ class SourceType(str, Enum):
     SITEMAP = "sitemap"  # Hjemmesidens sitemap.xml, til sider hvor listen laves med JavaScript
     BOLIGSIDEN = "boligsiden"  # Boligsidens JSON-søgning, til boksen med boliger til salg
     DBU_KAMPE = "dbu_kampe"    # Kampprogram fra en klubside i DBU's Klub-CMS
+    POLITI = "politi"          # Politiets døgnrapporter; kun lokale hændelser gemmes
+
+
+# Stednavne, der hører til Gulvmåttens område. Bruges til kalenderen og til at
+# finde lokale hændelser i politiets døgnrapporter.
+LOKALE_STEDER = ("hundested", "lynæs", "kikhavn", "torup", "dyssekilde", "nødebohuse")
 
 
 class ReviewStatus(str, Enum):

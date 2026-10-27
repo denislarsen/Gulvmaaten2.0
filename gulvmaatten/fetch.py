@@ -8,6 +8,8 @@ Fire slags kilder:
               titel og resumé hentes fra hver enkelt artikelside.
 - boligsiden  Boligsidens JSON-søgning. Hver bolig bliver et opslag med pris, areal
               m.m. i `data`.
+- politi      Politiets døgnrapporter. Listen læses, nye rapporter hentes, og kun
+              hændelser i Gulvmåttens område gemmes, én pr. opslag.
 - dbu_kampe   Kampprogrammet på en klubside i DBU's Klub-CMS. Hver kamp bliver et
               opslag med dato, hold og bane i `data`, så den kan komme direkte i
               kalenderen uden at Claude skal læse den.
@@ -21,6 +23,7 @@ Selve hentningen (`hent`) er adskilt fra fortolkningen (`parse_rss`, `parse_html
 
 from __future__ import annotations
 
+import html as html_lib
 import json
 import re
 from dataclasses import dataclass
@@ -33,7 +36,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from .db import Database
-from .models import RawItem, Source, SourceType
+from .models import LOKALE_STEDER, RawItem, Source, SourceType
 
 USER_AGENT = "Gulvmaatten/0.1 (lokalt bymedie; kontakt via GitHub denislarsen/gulvmaaten2.0)"
 TIMEOUT = 20.0
@@ -360,6 +363,67 @@ def parse_dbu_kampe(source: Source, content: str) -> list[RawItem]:
     return items
 
 
+# --- Politiets døgnrapporter -----------------------------------------------------
+
+POLITI_MAX_RAPPORTER = 10
+
+
+def parse_politi_liste(content: str) -> list[dict]:
+    """politi.dk bygger listen med JavaScript, men data står som JSON i sidens
+    ng-init. Returnerer de døgnrapporter, der står der (Link, Headline, ListDate)."""
+    soup = BeautifulSoup(content, "html.parser")
+    for el in soup.select("[ng-init]"):
+        init = el["ng-init"].strip()
+        if not init.startswith("init(") or "NewsList" not in init:
+            continue
+        data = json.loads(html_lib.unescape(init[len("init("):-1]))
+        return [n for n in data.get("AllNews", {}).get("NewsList", []) if n.get("Link")]
+    return []
+
+
+def _er_lokal(tekst: str) -> bool:
+    t = tekst.lower()
+    return any(sted in t for sted in LOKALE_STEDER)
+
+
+def parse_politi_rapport(source: Source, url: str, content: str, dato: str = "") -> list[RawItem]:
+    """Hver hændelse i rapporten har en overskrift som "To løse køer på vejbane,
+    Hundested". Kun hændelser, der foregår i eller nævner vores område, gemmes."""
+    soup = BeautifulSoup(content, "html.parser")
+    items = []
+    for tekstblok in soup.select("div.rich-text"):
+        for h2 in tekstblok.find_all("h2"):
+            titel = h2.get_text(" ", strip=True)
+            afsnit = []
+            for el in h2.find_next_siblings():
+                if el.name == "h2":
+                    break
+                tekst = el.get_text(" ", strip=True)
+                if tekst:
+                    afsnit.append(tekst)
+            tekst = "\n\n".join(afsnit)
+            if not titel or not _er_lokal(f"{titel} {tekst}"):
+                continue
+            anker = re.sub(r"[^a-z0-9æøå]+", "-", titel.lower()).strip("-")
+            items.append(RawItem(source_id=source.id, url=f"{url}#{anker}", titel=titel, tekst=tekst,
+                                 dato_tekst=dato))
+    return items
+
+
+def fetch_politi_items(db: Database, source: Source, content: str, fetcher: Fetcher) -> list[RawItem]:
+    """Hent kun rapporter, vi ikke har læst før. En rapport uden lokale hændelser
+    giver ingen opslag, men huskes, så den ikke hentes igen."""
+    items = []
+    for rapport in parse_politi_liste(content)[:POLITI_MAX_RAPPORTER]:
+        noegle = f"politi:{rapport['Link']}"
+        if db.sidst_koert(noegle):
+            continue
+        items += parse_politi_rapport(source, rapport["Link"], fetcher(rapport["Link"]),
+                                      dato=rapport.get("ListDate", ""))
+        db.marker_koert(noegle)
+    return items
+
+
 # --- Samlet ------------------------------------------------------------------
 
 def fetch_source(db: Database, source: Source, content: str | None = None,
@@ -381,6 +445,8 @@ def fetch_source(db: Database, source: Source, content: str | None = None,
             items = parse_boligsiden(source, content)
         elif source.type == SourceType.DBU_KAMPE:
             items = parse_dbu_kampe(source, content)
+        elif source.type == SourceType.POLITI:
+            items = fetch_politi_items(db, source, content, fetcher)
         else:
             items = parse_html(source, content)
     except Exception as e:  # noqa: BLE001 - vi vil rapportere alle fejl pr. kilde

@@ -60,6 +60,24 @@ kilder:
       derfor bruges sitemappet. Kun nyheder med betydning for Hundested er
       relevante; Frederiksværk-stof er udlandsstof.
 
+  - id: politi-doegnrapport
+    navn: Nordsjællands Politi, døgnrapport
+    url: https://politi.dk/doegnrapporter?district=Nordsjaellands-Politi
+    type: politi
+    kategori: politi
+    by: Halsnæs
+    tillid: 5
+    frekvens: 6
+    prioritet: 3
+    billeder: nej
+    sprog: da
+    verificeret: true
+    regler: >
+      Officiel kilde. Kun hændelser i Hundested og omegn gemmes (overskrift
+      eller tekst nævner fx Hundested, Lynæs eller Kikhavn). Altid høj risiko:
+      ingen navne, ingen præcise adresser på ofre, kun hvad politiet oplyser.
+      Verificeret 27. oktober 2026.
+
   # --- Havnen og Lynæs ------------------------------------------------------------
 
   - id: hundested-havn
@@ -160,7 +178,7 @@ kilder:
     regler: >
       Kulturcafé på havnen med mange arrangementer (livemusik, DJ, foredrag,
       Camel Festival). Hjemmesiden afviser automatiske besøg med et bot-tjek
-      (28. oktober 2026), så kilden er slået fra. Muligheder: bed stedet om
+      (27. oktober 2026), så kilden er slået fra. Muligheder: bed stedet om
       at lade os hente siden, om et nyhedsbrev, eller find deres billetside.
 
   - id: halsnaes-bryghus-kalender
@@ -360,7 +378,7 @@ kilder:
       billede: .theme_newsFolder_img
       billede_uden_query: true
     regler: >
-      Klubbens egen hjemmeside (DBU Klub-CMS), verificeret 28. oktober 2026.
+      Klubbens egen hjemmeside (DBU Klub-CMS), verificeret 27. oktober 2026.
       Både futsal og fodbold. Futsal har særligt fokus (se fokus_ord i
       gulvmaatten.yaml). Børne- og ungdomsspillere nævnes aldrig ved navn.
       Resultater skal stå i kilden; gæt aldrig en stilling.
@@ -396,7 +414,7 @@ kilder:
     sprog: da
     verificeret: true
     regler: >
-      Slået fra 28. oktober 2026: vi prøver uden rss.app og bruger klubbens
+      Slået fra 27. oktober 2026: vi prøver uden rss.app og bruger klubbens
       egen hjemmeside. Kan slås til igen med aktiv: true.
 
   # --- Boliger --------------------------------------------------------------------

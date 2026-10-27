@@ -25,6 +25,8 @@ Det, der virker nu:
   Boligsiden for 3390
 - Redaktion med Claude: vurdering, research og udkast (`gulvmaatten/agent.py`)
 - Madsektion med "Ugens spisested" og fast kørselsplan (`gulvmaatten/mad.py`)
+- Politiets døgnrapport (Nordsjællands Politi): kun hændelser i Hundested og
+  omegn bliver til udkast, altid med høj risiko og uden navne
 - Hundested IK fra klubbens egen hjemmeside: nyheder (futsal og fodbold) og
   hjemmekampe direkte i kalenderen, med eget blåt bånd på forsiden
 - Server til drift (`gulvmaatten/server.py`, `Dockerfile`) med redaktørside

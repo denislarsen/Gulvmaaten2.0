@@ -24,10 +24,9 @@ from pydantic import BaseModel, Field
 
 from .agent import MODEL, SYSTEM_REDAKTION, dagens_dato, hent_artikeltekst
 from .db import Database
-from .models import Event, RawItem, Source
+from .models import LOKALE_STEDER, Event, RawItem, Source
 
 HORISONT_DAGE = 90
-LOKALE_STEDER = ("hundested", "lynæs", "kikhavn", "torup", "dyssekilde", "nødebohuse")
 
 
 class Arrangement(BaseModel):

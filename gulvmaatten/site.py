@@ -48,7 +48,7 @@ SEKTION_NAVNE = {
     "sport": "Sport", "mad": "Mad", "udland": "Udlandsstof",
 }
 KATEGORI_NAVNE = {
-    "nyheder": "Nyheder", "havnen": "Havnen", "kultur": "Kultur", "folkely": "Folkely",
+    "nyheder": "Nyheder", "politi": "Politi", "havnen": "Havnen", "kultur": "Kultur", "folkely": "Folkely",
     "sport": "Sport", "mad": "Mad", "arrangementer": "Arrangementer", "kommune": "Kommunen",
     "foreningsliv": "Foreningsliv", "byudvikling": "Byudvikling", "trafik": "Trafik",
     "udlandsstof": "Udlandsstof",
