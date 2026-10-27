@@ -7,12 +7,12 @@ se, hvor en sag står.
 |---|---|---|
 | 1. Overvågning | Crawleren henter kilderne efter deres frekvens | Bygget |
 | 2. Registrering | Nye og ændrede opslag gemmes som RawItems | Bygget |
-| 3. Filtrering | Agent vurderer lokal nyhedsværdi og frasorterer støj | Næste |
-| 4. Research | Agent sammenholder kilder og tjekker dato, sted, pris m.m. | Næste |
-| 5. Udkast | Agent skriver kort artikel med kildeangivelse | Næste |
+| 3. Filtrering | Agent vurderer lokal nyhedsværdi og frasorterer støj | Bygget |
+| 4. Research | Agent sammenholder kilder og tjekker dato, sted, pris m.m. | Bygget |
+| 5. Udkast | Agent skriver kort artikel med kildeangivelse | Bygget |
 | 6. Kvalitetssikring | Automatisk tjek for manglende kilder, dubletter, persondata, risiko | Senere |
-| 7. Review | Redaktør godkender eller afviser | Senere |
-| 8. Publicering | Godkendte artikler lægges på hjemmesiden | Senere |
+| 7. Review | Redaktør godkender eller afviser (`godkend`, `afvis`) | Bygget |
+| 8. Publicering | Godkendte artikler lægges på hjemmesiden (`site`) | Bygget |
 | 9. Opfølgning | Ændrede RawItems udløser opdatering af artikel/arrangement | Senere |
 
 ## Regler agenten skal overholde
@@ -30,12 +30,18 @@ Disse skrives ind i agentens instruktioner, når trin 3–5 bygges.
 5. **Ingen private persondata.** Kun navne, der optræder i en offentlig
    kilde med redaktionel relevans (fx en borgmester eller en foredragsholder).
 6. **Rettelser er synlige.** Fejl rettes med en rettelsesnote på artiklen.
+7. **Andre medier er tips, ikke kilder.** En historie fra Frederiksborg Amts
+   Avis kræver en selvstændig kilde, og deres billeder bruges aldrig.
+8. **Hundested først.** Frederiksværk er udlandsstof og bringes kun, når det
+   er usædvanligt. Overskriften må gerne have et tørt glimt i øjet.
+9. **Agenten anmelder ikke.** "Ugens spisested" er et faktaudkast; redaktøren
+   spiser der og skriver dommen.
 
 ## Agentens arbejdsgang (trin 3–5, planlagt)
 
 For hvert nyt eller ændret RawItem:
 
-1. **Vurdér** – Er det relevant for borgere i Glostrup eller Brøndby? Giv en
+1. **Vurdér** – Er det relevant for borgere i Hundested? Er det overstået? Giv en
    score 0–10 og en kategori. Under en tærskel: arkivér uden videre.
 2. **Research** – Find andre RawItems om samme sag (samme dato, sted eller
    titel). Sammenhold oplysningerne. Udpeg hvad der er bekræftet, og hvad

@@ -4,107 +4,350 @@
 #   id          Kort unikt navn
 #   navn        Visningsnavn
 #   url         Adressen der hentes
-#   type        rss, html eller sitemap
-#   kategori    Hvilken slags kilde (kommune, bibliotek, sport, forening, kirke, medie ...)
-#   by          Glostrup eller Brøndby
+#   type        rss, html, sitemap eller boligsiden
+#   kategori    Hvilken slags kilde (kommune, havn, kultur, sport, forening, medie, bolig ...)
+#   by          Hundested, Halsnæs (hele kommunen) eller Frederiksværk
 #   tillid      1-5, hvor 5 er en officiel kilde man kan stole fuldt på
 #   frekvens    Hvor ofte kilden bør hentes, i timer
+#   prioritet   1-3. 3 = særligt fokus, opslag vurderes en ekstra gang op
+#   kun_tip     true: opslag bliver tips til redaktøren, aldrig artikler
+#               (andre medier og borgergrupper på Facebook)
+#   billeder    ja: billeder må vises med kreditering
+#               nej: billeder må aldrig bruges (fx andre mediers fotos)
+#   kalender    true: alle opslag gennemgås for arrangementer til kalenderen
+#   kun_kalender true: bruges kun til kalenderen, ikke til nyheder
+#   aktiv       false = kilden er kendt, men hentes ikke (fx mangler URL)
 #   sprog       da
 #   verificeret true når kilden er testet mod den rigtige hjemmeside
 #   html        CSS-selektorer, der udpeger opslag (type html) eller felter på
-#               artikelsiden (type sitemap)
-#   sitemap     Kun for type sitemap: prefix (kun URL'er der starter sådan) og
+#               artikelsiden (type sitemap). `billede` peger på et <img>.
+#               `url_uden_query: true` fjerner alt efter ? i links (nogle
+#               sider sætter dagens dato på, så samme opslag ellers ser nyt ud).
+#               Med `hel_side: true` bliver hele siden ét opslag, så man
+#               kan se, når indholdet ændrer sig.
+#   sitemap     Kun for type sitemap: prefix (kun URL'er der starter sådan),
+#               moenster (valgfrit regulært udtryk URL'en skal matche) og
 #               max (højst så mange, nyeste først)
 #   regler      Fritekst om særlige hensyn
 #
-# Alle fem kilder er verificeret mod de rigtige hjemmesider den 21. oktober 2026.
+# Kilderne er verificeret mod de rigtige hjemmesider den 27. oktober 2026.
+# Facebook og Instagram hentes via rss.app, som laver sider og grupper om til
+# RSS-feeds. Øvrige profiler står i config/steder.yaml.
 
 kilder:
-  - id: glostrup-kommune-nyheder
-    navn: Glostrup Kommune, nyheder
-    url: https://www.glostrup.dk/sitemap.xml
+  # --- Officielle kilder ------------------------------------------------------
+
+  - id: halsnaes-kommune-nyheder
+    navn: Halsnæs Kommune, nyheder
+    url: https://halsnaes.dk/sitemap.xml
     type: sitemap
     kategori: kommune
-    by: Glostrup
+    by: Halsnæs
     tillid: 5
     frekvens: 6
+    prioritet: 2
+    billeder: ja
     sprog: da
     verificeret: true
     sitemap:
-      prefix: https://www.glostrup.dk/nyheder/
+      prefix: https://halsnaes.dk/nyheder/
+      moenster: '^https://halsnaes\.dk/nyheder/\d{4}/[^/]+/[^/]+$'
       max: 20
     html:
       titel: h1
     regler: >
-      Officiel kilde. Nyhedslisten på glostrup.dk/nyheder laves med JavaScript,
-      derfor bruges sitemappet. Resumé kommer fra sidens meta description.
+      Officiel kilde for hele kommunen. Nyhedslisten laves med JavaScript,
+      derfor bruges sitemappet. Kun nyheder med betydning for Hundested er
+      relevante; Frederiksværk-stof er udlandsstof.
 
-  - id: brondby-kommune-nyheder
-    navn: Brøndby Kommune, nyheder
-    url: https://www.brondby.dk/om-kommunen/nyheder/rss
+  # --- Havnen og Lynæs ------------------------------------------------------------
+
+  - id: hundested-havn
+    navn: Hundested Havn
+    url: https://hundestedhavn.dk/feed/
     type: rss
-    kategori: kommune
-    by: Brøndby
+    kategori: havn
+    by: Hundested
     tillid: 5
-    frekvens: 6
+    frekvens: 72
+    prioritet: 3
+    billeder: ja
     sprog: da
     verificeret: true
     regler: >
-      Officiel kilde med RSS-feed. Indeholder også rutinemeddelelser som
-      landzonetilladelser, der sjældent har nyhedsværdi.
+      Havnens egne nyheder. Opdateres sjældent. Forretninger, spisesteder og
+      foreninger på havnen står i config/steder.yaml.
 
-  - id: glostrup-bibliotek-arrangementer
-    navn: Glostrup Bibliotek, arrangementer
-    url: https://www.glostrupbib.dk/arrangementer
+  - id: lynaes-surfcenter
+    navn: Lynæs Surfcenter og Madbaren
+    url: https://surfcenter.dk/
     type: html
-    kategori: bibliotek
-    by: Glostrup
+    kategori: kultur
+    by: Hundested
     tillid: 4
     frekvens: 24
+    prioritet: 3
+    billeder: ja
+    sprog: da
+    verificeret: true
+    html:
+      opslag: 'a.card_inner[href*="/vare/"]'
+      titel: h5
+      resume: .card_content p
+      billede: img
+      url_uden_query: true
+    regler: >
+      Kommerciel aktør, men Lynæs' kulturelle omdrejningspunkt. Koncerter,
+      events, loppemarked og sommerbio er stof; kurser og udlejning er ikke.
+      Datoen står ofte i titlen (fx "Poul Krebs 7. august"). Tjek årstal.
+
+  - id: lynaes-sejl-kajakklub
+    navn: Lynæs Sejl- og Kajakklub
+    url: https://www.lynaes.dk/feed/
+    type: rss
+    kategori: forening
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    billeder: ja
+    kalender: true
+    sprog: da
+    verificeret: true
+    regler: Foreningsnyheder. Kapsejlads hører under sport.
+
+  # --- Kalender: bibliotek og spisesteder ---------------------------------------
+
+  - id: hundested-bibliotek
+    navn: Hundested Bibliotek, arrangementer
+    url: https://bibliotekerne.halsnaes.dk/arrangementer?f%5B0%5D=filial%3A70
+    type: html
+    kategori: bibliotek
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    billeder: ja
+    kalender: true
     sprog: da
     verificeret: true
     html:
       opslag: li.content-list__item
       titel: h2.content-list-item__title
       link: a
-      dato: time
+      dato: .content-list-item__content-bottom-container
       resume: .content-list-item__description
-    regler: Tjek altid dato, tid, pris og tilmelding mod kildens egen side.
+      billede: img
+    regler: >
+      Halsnæs Bibliotekerne filtreret på Hundested Bibliotek. Datoen indeholder
+      også sted og pris. Faste tilbud (advokatvagt, lektiecafé) er kalenderstof,
+      ikke nyheder.
 
-  - id: brondby-bibliotek-arrangementer
-    navn: Brøndby Bibliotekerne, arrangementer
-    url: https://www.brondby-bibliotekerne.dk/arrangementer
+  - id: halsnaes-bryghus-kalender
+    navn: Halsnæs Bryghus, kalender
+    url: https://www.halsbryg.dk/kalenderen/
     type: html
-    kategori: bibliotek
-    by: Brøndby
+    kategori: spisested
+    by: Hundested
     tillid: 4
     frekvens: 24
+    billeder: ja
+    kun_kalender: true
     sprog: da
     verificeret: true
     html:
-      opslag: li.content-list__item
-      titel: h2.content-list-item__title
-      link: a
-      dato: time
-      resume: .content-list-item__description
-    regler: >
-      Samme system som Glostrup Bibliotek. Dækker Biblioteket i Brønden og
-      Biblioteket i Kilden. Tjek altid dato, tid, pris og tilmelding mod kildens egen side.
+      hel_side: true
+      resume: main
+    regler: Banko, fredagsbar, koncerter og andre arrangementer på bryghuset.
 
-  - id: brondby-if-nyheder
-    navn: Brøndby IF, nyheder
-    url: https://brondby.com/nyheder
+  - id: spisehuset-knud
+    navn: Spisehuset Knud
+    url: https://www.knud.biz/
     type: html
-    kategori: sport
-    by: Brøndby
+    kategori: spisested
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    billeder: ja
+    kun_kalender: true
+    sprog: da
+    verificeret: true
+    html:
+      hel_side: true
+      resume: body
+    regler: Forsiden viser menuer og arrangementer (vinskole, vildtmiddage, nytårsbrunch).
+
+  - id: lynaes-surfcenter-kalender
+    navn: Lynæs Surfcenter og Madbaren, kalender
+    url: https://surfcenter.dk/kalender/
+    type: html
+    kategori: spisested
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    billeder: ja
+    kun_kalender: true
+    sprog: da
+    verificeret: true
+    html:
+      hel_side: true
+      resume: body
+    regler: Kommende events i Lynæs, fx julemarked og julefrokoster på Madbaren.
+
+  - id: knud-rasmussens-hus
+    navn: Knud Rasmussens Hus, det sker
+    url: https://knudrasmus.dk/det-sker
+    type: html
+    kategori: kultur
+    by: Hundested
+    tillid: 5
+    frekvens: 48
+    billeder: ja
+    kun_kalender: true
+    sprog: da
+    verificeret: true
+    html:
+      hel_side: true
+      resume: body
+    regler: Museets egne arrangementer og omvisninger.
+
+  # --- Kultur -------------------------------------------------------------------
+
+  - id: folkely-festival
+    navn: Folkely Festival
+    url: https://www.folkely.dk/blog-feed.xml
+    type: rss
+    kategori: kultur
+    by: Hundested
     tillid: 4
     frekvens: 12
+    prioritet: 3
+    billeder: ja
+    sprog: da
+    verificeret: true
+    regler: >
+      Særligt fokus. Feedet er festivalens egen samling af presseomtale
+      (Ekstra Bladet, TV 2 Kosmopol m.fl.), ikke kun egne nyheder. Henvis til
+      det oprindelige medie, når en historie stammer derfra. Line-up og
+      billetinfo står på forsiden folkely.dk.
+
+  - id: folkely-forside
+    navn: Folkely Festival, forside
+    url: https://www.folkely.dk/
+    type: html
+    kategori: kultur
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    prioritet: 3
+    billeder: ja
     sprog: da
     verificeret: true
     html:
-      opslag: 'a[href*="/nyheder/"]'
-      titel: h2
-      dato: time
+      hel_side: true
+      resume: main
     regler: >
-      Kommerciel klub. Brug kun nyheder med lokal betydning, ikke rene salgsopslag
-      eller selskabsmeddelelser. Siden viser kun de seneste ca. 8 nyheder.
+      Hele forsiden registreres som ét opslag. Når teksten ændrer sig (nye
+      navne på plakaten, billetbølger), markeres opslaget som ændret.
+
+  # --- Lokale medier ---------------------------------------------------------------
+
+  - id: faa-halsnaes
+    navn: Halsnæs Avis / Frederiksborg Amts Avis (sn.dk)
+    url: https://frederiksborgamtsavis.sn.dk/halsnaes
+    type: html
+    kategori: medie
+    by: Halsnæs
+    tillid: 3
+    frekvens: 6
+    billeder: nej
+    kun_tip: true
+    sprog: da
+    verificeret: true
+    html:
+      opslag: a.card
+      titel: h2
+      resume: .card__kicker
+    regler: >
+      Konkurrerende medie. Halsnæs Avis (tidligere Halsnæs Posten) og
+      Frederiksborg Amts Avis udgives begge af Sjællandske Medier og deler
+      denne side på sn.dk.
+      Bruges kun som tip: vi skriver aldrig deres tekst om og bruger aldrig
+      deres billeder. En historie herfra kræver en selvstændig kilde, fx
+      kommunen eller arrangøren. Resuméet er avisens stednavn (fx "Hundested").
+      Mange artikler er bag betalingsmur.
+
+  # --- Sociale medier (via rss.app) --------------------------------------------------
+
+  - id: fb-folkely
+    navn: Folkely Festival på Facebook
+    url: https://rss.app/feeds/B3oom7aZQs2Pzi0K.xml
+    type: rss
+    kategori: kultur
+    by: Hundested
+    tillid: 4
+    frekvens: 6
+    prioritet: 3
+    billeder: ja
+    sprog: da
+    verificeret: true
+    regler: >
+      Festivalens egen Facebook-side via rss.app. Her kommer nye navne og
+      billetnyt først. Officiel kilde for festivalens egne oplysninger.
+      Opslagene er skrevet i reklametone; skriv dem om til neutral tekst.
+
+  - id: fb-3390-hundested
+    navn: Facebook-gruppen "3390 Hundested"
+    url: https://rss.app/feeds/xe11V1dIpD8BrG1y.xml
+    type: rss
+    kategori: borgergruppe
+    by: Hundested
+    tillid: 2
+    frekvens: 6
+    billeder: nej
+    kun_tip: true
+    sprog: da
+    verificeret: true
+    regler: >
+      Borgernes egen gruppe. Opslagene er skrevet af privatpersoner og er tips,
+      ikke kilder. Navne og billeder fra gruppen bruges aldrig. Feedet laves af
+      rss.app (verificeret 27. oktober 2026; feedet indeholdt kun ét opslag
+      ved testen).
+
+  # --- Sport -----------------------------------------------------------------------
+
+  - id: hundested-ik
+    navn: Hundested IK (fodbold og futsal) på Facebook
+    url: https://rss.app/feeds/FyqmZsm42fgKZEPp.xml
+    type: rss
+    kategori: sport
+    by: Hundested
+    tillid: 4
+    frekvens: 6
+    prioritet: 2
+    billeder: ja
+    kalender: true
+    sprog: da
+    verificeret: true
+    regler: >
+      Klubbens egen Facebook-side via rss.app (verificeret 27. oktober 2026).
+      Både futsal og fodbold. Futsal har særligt fokus (se fokus_ord i
+      gulvmaatten.yaml). Kampe med tid og sted kommer i kalenderen. Børne- og
+      ungdomsspillere nævnes aldrig ved navn. Resultater skal stå i opslaget;
+      gæt aldrig en stilling.
+
+  # --- Boliger --------------------------------------------------------------------
+
+  - id: boliger-til-salg
+    navn: Boliger til salg i 3390 Hundested
+    url: https://api.boligsiden.dk/search/cases?zipCodes=3390&per_page=100&sortBy=timeOnMarket&sortAscending=true
+    type: boligsiden
+    kategori: bolig
+    by: Hundested
+    tillid: 4
+    frekvens: 12
+    billeder: ja
+    sprog: da
+    verificeret: true
+    regler: >
+      Boligsidens samlede liste over alle mægleres boliger i 3390. Bruges kun
+      til boksen "Nye boliger til salg", ikke til artikler. Billeder vises med
+      mæglerens navn og link til salgsopstillingen.

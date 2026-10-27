@@ -1,0 +1,332 @@
+/* Gulvmåtten: avisforside i tre kolonner, én kolonne på telefoner. */
+
+:root {
+  --papir: #ffffff;
+  --side: #eceae6;
+  --blaek: #111111;
+  --graa: #5c5c5c;
+  --linje: #d9d9d9;
+  --blaa: #2b8fd6;
+  --link: #1f7fc4;
+  --groen: #6aa339;
+  --lyserod: #f4c6d6;
+  --lyserod-moerk: #b0285e;
+  --gul: #f6c445;
+  --overskrift: "Oswald", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --broed: "Source Serif 4", Georgia, "Times New Roman", serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--side);
+  color: var(--blaek);
+  font-family: var(--broed);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+a { color: inherit; text-decoration: none; }
+a:hover h2, a:hover h3, a.teaser:hover .teaser__titel { text-decoration: underline; text-decoration-thickness: 2px; }
+
+.avis {
+  max-width: 1180px;
+  margin: 24px auto;
+  padding: 28px 32px 32px;
+  background: var(--papir);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .08), 0 8px 24px rgba(0, 0, 0, .06);
+}
+
+h1, h2, h3, .masthead, .teaser__titel, .topboks, .annonce, .bolig__pris {
+  font-family: var(--overskrift);
+  letter-spacing: -0.01em;
+}
+
+.kicker {
+  display: block;
+  color: var(--link);
+  font-family: var(--overskrift);
+  font-weight: 500;
+  font-size: 15px;
+  margin: 2px 0 4px;
+}
+
+.udkast {
+  display: inline-block;
+  background: var(--gul);
+  color: var(--blaek);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  vertical-align: middle;
+  border-radius: 2px;
+}
+
+/* --- Topstrimmel ------------------------------------------------------------- */
+
+.topstrimmel {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0 28px;
+  border-top: 1px solid var(--linje);
+  padding-top: 10px;
+}
+.topstrimmel .teaser { border-bottom: 1px solid var(--linje); padding-bottom: 10px; }
+.topstrimmel .teaser + .teaser { border-left: 1px solid var(--linje); padding-left: 28px; margin-left: -28px; }
+
+.teaser { display: block; }
+.teaser__titel { display: block; font-size: 23px; font-weight: 700; line-height: 1.12; }
+
+.topboks {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 12px 16px;
+  color: #fff;
+  background: var(--groen);
+  min-height: 112px;
+}
+.topboks__lille { font-size: 17px; font-weight: 500; }
+.topboks__stor { font-size: 30px; font-weight: 700; line-height: 1.05; margin: 4px 0; }
+
+/* --- Avishoved --------------------------------------------------------------- */
+
+.hoved { margin-top: 18px; }
+.hoved__linje { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.dato { color: var(--link); font-family: var(--broed); font-size: 26px; font-weight: 400; }
+.hoved__info { font-family: var(--overskrift); font-size: 14px; font-weight: 500; color: var(--graa); }
+.masthead {
+  display: block;
+  font-size: clamp(56px, 13vw, 148px);
+  font-weight: 700;
+  line-height: .95;
+  letter-spacing: -0.035em;
+  margin: 4px 0 10px;
+}
+.blaa-streg { height: 12px; background: var(--blaa); }
+.hoved--lille .masthead { font-size: clamp(40px, 8vw, 72px); }
+.hoved--lille .dato { font-size: 18px; }
+.hoved--lille .blaa-streg { height: 8px; }
+
+/* --- Tophistorie ------------------------------------------------------------- */
+
+.top {
+  display: grid;
+  grid-template-columns: 3fr 6fr 3fr;
+  gap: 24px;
+  padding: 22px 0 24px;
+  border-bottom: 1px solid var(--linje);
+}
+.top__tekst h2 { font-size: 34px; line-height: 1.05; margin: 0 0 14px; }
+.top__tekst p { font-family: var(--broed); font-weight: 700; font-size: 18px; line-height: 1.35; margin: 0 0 10px; }
+.stednavn { color: var(--link); }
+.laes { color: var(--link); font-family: var(--overskrift); font-weight: 500; }
+.top__billede img { aspect-ratio: 3 / 2; }
+.top__side .teaser { padding: 0 0 14px; margin-bottom: 14px; border-bottom: 1px solid var(--linje); }
+.top__side .teaser__titel { font-size: 26px; }
+
+/* --- Billeder ---------------------------------------------------------------- */
+
+.foto { margin: 0; position: relative; }
+.foto img { display: block; width: 100%; height: auto; object-fit: cover; background: var(--side); }
+.foto figcaption { font-family: var(--broed); font-style: italic; font-size: 12px; color: var(--graa); margin-top: 3px; }
+
+/* --- Sektioner --------------------------------------------------------------- */
+
+.sektion, .mad, .boliger, .udland { padding: 22px 0; border-bottom: 1px solid var(--linje); }
+.sektion__titel {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  border-top: 4px solid var(--blaek);
+  padding-top: 6px;
+  margin: 0 0 16px;
+}
+.sektion__intro { margin: -8px 0 16px; color: var(--graa); font-style: italic; }
+
+.gitter { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.kort h3 { font-size: 24px; line-height: 1.1; margin: 0 0 6px; }
+.kort p { margin: 0; font-size: 16px; color: #333; }
+.kort__foto img { aspect-ratio: 16 / 10; }
+.kort__foto { margin-bottom: 8px; }
+
+/* Folkely: lyserødt bånd hen over siden */
+.sektion--folkely {
+  background: var(--lyserod);
+  margin: 0 -32px;
+  padding: 22px 32px;
+  border-bottom: none;
+}
+.sektion--folkely .sektion__titel { border-top-color: var(--lyserod-moerk); color: var(--lyserod-moerk); }
+.sektion--folkely .kicker { color: var(--lyserod-moerk); }
+
+.to-kolonner { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; }
+.to-kolonner--bred { grid-template-columns: 2fr 1fr; }
+.to-kolonner--bred .gitter { grid-template-columns: repeat(2, 1fr); }
+.to-kolonner > * { min-width: 0; }
+
+/* Mad */
+.mad .sektion__titel { border-top-color: var(--groen); color: var(--groen); }
+.mad h3 { font-size: 30px; line-height: 1.05; margin: 10px 0 6px; }
+.mad__foto img { aspect-ratio: 3 / 2; }
+.maatter { font-family: var(--overskrift); color: var(--groen); font-size: 18px; margin: 0 0 6px; letter-spacing: 2px; }
+.maatter .tom { color: var(--linje); }
+
+/* Boliger */
+.boliger__liste { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.bolig { display: flex; flex-direction: column; }
+.bolig__foto img { aspect-ratio: 4 / 3; }
+.bolig__pris { font-size: 24px; font-weight: 700; margin-top: 6px; }
+.bolig__adresse { font-weight: 700; }
+.bolig__fakta, .bolig__maegler, .lille { font-size: 14px; color: var(--graa); }
+.bolig:hover .bolig__adresse { text-decoration: underline; }
+
+/* Udlandsstof */
+.udland .sektion__titel { border-top-color: var(--lyserod-moerk); }
+.udland__stempel {
+  display: inline-block;
+  transform: rotate(-2deg);
+  border: 2px solid var(--lyserod-moerk);
+  color: var(--lyserod-moerk);
+  font-family: var(--overskrift);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 13px;
+  padding: 2px 8px;
+  margin: 0 0 12px;
+}
+.udland ul { list-style: none; padding: 0; margin: 0; }
+.udland li { padding: 10px 0; border-bottom: 1px dotted var(--linje); }
+.udland li a { font-family: var(--overskrift); font-weight: 600; font-size: 20px; line-height: 1.15; }
+.udland li p { margin: 4px 0 0; font-size: 15px; color: #333; }
+
+/* Annoncer */
+.annonce {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background: #1c1c1c;
+  color: #fff;
+  padding: 14px 16px;
+  position: relative;
+}
+.annonce__maerke { position: absolute; top: 4px; left: 8px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .6; }
+.annonce__tekst { font-size: 28px; font-weight: 700; line-height: 1.1; }
+.annonce__under { font-family: var(--broed); font-size: 15px; opacity: .85; }
+.annonce--bred { margin: 22px 0; min-height: 120px; border: 6px double #fff; outline: 2px solid #1c1c1c; }
+
+/* Det sker: kalenderliste med datoblok */
+.det-sker { padding: 22px 0; border-bottom: 1px solid var(--linje); }
+.det-sker .sektion__titel { border-top-color: var(--blaa); color: var(--link); }
+.ev-liste { list-style: none; margin: 0 0 12px; padding: 0; }
+.ev { border-bottom: 1px dotted var(--linje); }
+.ev a { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; }
+.ev a:hover .ev__titel { text-decoration: underline; }
+.ev__dato {
+  flex: 0 0 46px;
+  display: flex; flex-direction: column; align-items: center;
+  border: 2px solid var(--blaek);
+  font-family: var(--overskrift); line-height: 1; padding: 3px 0 4px;
+  text-transform: uppercase; font-size: 11px; font-weight: 500;
+}
+.ev__dato b { font-size: 21px; font-weight: 700; }
+.ev__dato i { font-style: normal; color: var(--link); }
+.ev__tekst { display: flex; flex-direction: column; min-width: 0; }
+.ev__titel { font-family: var(--overskrift); font-weight: 600; font-size: 18px; line-height: 1.15; }
+.ev__meta { font-size: 14px; color: var(--graa); }
+.ev__aflyst { background: var(--lyserod-moerk); color: #fff; font-size: 11px; padding: 1px 5px; text-transform: uppercase; }
+
+/* Kalendersiden */
+.kalender { max-width: 760px; margin: 24px auto 0; }
+.kalender h1 { font-size: clamp(32px, 5vw, 50px); line-height: 1.05; margin: 0 0 8px; }
+.kalender__intro { color: var(--graa); margin: 0 0 18px; }
+.kal-dag h2 {
+  font-family: var(--overskrift); font-size: 15px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  border-top: 4px solid var(--blaek); padding-top: 6px; margin: 22px 0 4px;
+}
+
+/* Folkely: smalt bånd med højst to historier */
+.folkely {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--lyserod); padding: 10px 14px; margin: 22px 0 0;
+}
+.folkely__navn {
+  font-family: var(--overskrift); font-size: 26px; font-weight: 700; color: var(--lyserod-moerk);
+  margin: 0; letter-spacing: -0.01em;
+}
+.folkely__punkt { display: flex; align-items: center; gap: 10px; flex: 1 1 0; min-width: 0; }
+.folkely__punkt img { width: 64px; height: 48px; object-fit: cover; flex: 0 0 auto; }
+.folkely__punkt span { font-family: var(--overskrift); font-weight: 600; font-size: 17px; line-height: 1.15; }
+.folkely__punkt:hover span { text-decoration: underline; }
+
+/* --- Artikelside ------------------------------------------------------------- */
+
+.artikel { max-width: 720px; margin: 24px auto 0; }
+.artikel h1 { font-size: clamp(32px, 5vw, 50px); line-height: 1.05; margin: 4px 0 14px; }
+.artikel__resume { font-weight: 700; font-size: 20px; line-height: 1.4; }
+.artikel__foto { margin: 18px 0; }
+.artikel__tekst p { margin: 0 0 16px; }
+.praktisk, .kilder, .redaktion, .rettelse {
+  border-top: 3px solid var(--blaek);
+  background: #f6f5f2;
+  padding: 12px 16px;
+  margin: 20px 0;
+  font-size: 16px;
+}
+.praktisk h2, .kilder h2, .redaktion h2 { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 6px; }
+.kilder ul { margin: 0; padding-left: 18px; }
+.kilder a { color: var(--link); word-break: break-all; }
+.redaktion { border-top-color: var(--gul); background: #fff8e0; }
+.rettelse { border-top-color: var(--lyserod-moerk); }
+
+/* --- Fod --------------------------------------------------------------------- */
+
+.fod { margin-top: 28px; padding-top: 14px; border-top: 12px solid var(--blaa); font-size: 14px; color: var(--graa); }
+.fod p { max-width: 70ch; }
+
+/* --- Tablet ------------------------------------------------------------------ */
+
+@media (max-width: 980px) {
+  .top { grid-template-columns: 1fr 1fr; }
+  .top__foto { grid-column: 1 / -1; grid-row: 1; }
+  .gitter { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* --- Telefon ----------------------------------------------------------------- */
+
+@media (max-width: 680px) {
+  body { font-size: 16px; }
+  .avis { margin: 0; padding: 14px 16px 24px; box-shadow: none; display: flex; flex-direction: column; }
+  .avis > .hoved { order: -1; margin-top: 0; margin-bottom: 12px; }  /* Avishovedet øverst på telefoner */
+  .topstrimmel { grid-template-columns: 1fr; }
+  .topstrimmel .teaser + .teaser { border-left: none; padding-left: 0; margin-left: 0; padding-top: 10px; }
+  .topstrimmel .topboks { margin-top: 12px; min-height: 0; }
+  .teaser__titel { font-size: 20px; }
+  .dato { font-size: 18px; }
+  .hoved__info { display: none; }
+  .blaa-streg { height: 8px; }
+  .top { grid-template-columns: 1fr; gap: 14px; }
+  .top__foto { grid-row: 1; }
+  .top__tekst h2 { font-size: 32px; }
+  .top__side .teaser__titel { font-size: 21px; }
+  .gitter, .to-kolonner, .to-kolonner--bred, .to-kolonner--bred .gitter { grid-template-columns: 1fr; }
+  .kort--foto a { display: grid; grid-template-columns: 112px 1fr; gap: 0 12px; }
+  .kort--foto .kort__foto { grid-row: 1 / span 3; margin: 0; }
+  .kort--foto .kort__foto img { aspect-ratio: 1; }
+  .kort--foto .kort__foto figcaption { font-size: 10px; line-height: 1.2; }
+  .kort h3 { font-size: 20px; }
+  .kort p { display: none; }
+  .sektion--folkely { margin: 0 -16px; padding: 18px 16px; }
+  .folkely { flex-direction: column; align-items: stretch; gap: 10px; }
+  .boliger__liste { gap: 12px; }
+  .bolig__pris { font-size: 19px; }
+}

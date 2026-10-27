@@ -7,7 +7,7 @@ from gulvmaatten.models import Source, SourceType
 def sitemap_source(max_items=20):
     return Source(
         id="test-sitemap", navn="Test", url="https://www.eksempel.dk/sitemap.xml",
-        type=SourceType.SITEMAP, kategori="kommune", by="Glostrup",
+        type=SourceType.SITEMAP, kategori="kommune", by="Hundested",
         sitemap={"prefix": "https://www.eksempel.dk/nyheder/", "max": max_items},
         html={"titel": "h1"},
     )

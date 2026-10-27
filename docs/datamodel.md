@@ -21,12 +21,19 @@ En hjemmeside eller et feed vi overvåger. Kommer fra `config/sources.yaml`.
 | verificeret | Om kildeprofilen er testet mod den rigtige side |
 | html | CSS-selektorer, der udpeger opslag på en HTML-side |
 | sitemap | For `sitemap`-kilder: `prefix` (kun URL'er der starter sådan) og `max` |
+| prioritet | 1–3. 3 = særligt fokus (Folkely, havnen, Lynæs). Sænker redaktionens tærskel med 1 |
+| billeder | Om kildens billeder må vises. Andre medier: altid nej |
+| aktiv | Inaktive kilder hentes ikke (fx futsal, hvor URL mangler) |
 | sidst_hentet | Sættes af crawleren |
 
 ## RawItem (råt opslag)
 
 Et opslag præcis som det blev fundet hos kilden. Ingen fortolkning.
 Nøglen er `(source_id, url)`, så samme opslag ikke gemmes to gange.
+
+`billede_url` er kildens billede (kun adressen). `data` er strukturerede
+felter som JSON, fx pris, areal og mægler for en bolig fra Boligsiden.
+Ingen af dem indgår i fingeraftrykket.
 
 `content_hash` er et fingeraftryk af titel, tekst og dato. Når crawleren
 ser et opslag igen, sammenlignes fingeraftrykket. Er det ændret, opdateres
@@ -46,6 +53,8 @@ Et artikeludkast. Ud over overskrift, resumé og brødtekst har den:
 - `usikkerheder`: hvad agenten ikke kunne bekræfte. Vises for redaktøren.
 - `risiko`: `low`, `medium` eller `high`. `high` kræver altid menneskelig godkendelse.
 - `status`: se ReviewStatus.
+- `billede_url` og `billede_kredit`: billedet og krediteringen, der altid vises sammen.
+- `tags`: bl.a. `spisested:<id>` for "Ugens spisested" og `karakter:<1-6>` for anmeldelsens gulvmåtter.
 
 ## ReviewStatus
 

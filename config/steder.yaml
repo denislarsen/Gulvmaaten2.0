@@ -1,0 +1,134 @@
+# Steder i Hundested: spisesteder, kultur og foreninger.
+#
+# Bruges til:
+#   - madsektionen ("Ugens spisested"), som tager spisestederne på skift
+#   - manuel overvågning af sociale medier (Facebook/Instagram kan ikke
+#     hentes automatisk uden at overtræde deres vilkår)
+#   - at genkende stednavne i opslag
+#
+# Grundlisten stammer fra hundestedhavn.dk/kultur-oplevelser (27. oktober 2026).
+# `python -m gulvmaatten spisesteder opdater` tjekker havnens side for nye
+# spisesteder. Nye steder skrives ikke automatisk ind her; de vises, så en
+# redaktør kan tilføje dem.
+#
+# Felter: id, navn, type (spisested, kultur, forening, overnatning, butik),
+# adresse, web, facebook, instagram, note.
+
+spisesteder:
+  - id: halsnaes-bryghus
+    navn: Halsnæs Bryghus
+    adresse: Nordre Beddingsvej 35, 3390 Hundested
+    web: https://www.halsbryg.dk/
+  - id: havfruen
+    navn: Havfruen
+    adresse: Nordre Beddingsvej 21, 3390 Hundested
+    web: https://www.havfruen-hundested.dk/
+  - id: molen
+    navn: Molen
+    adresse: Nordre Beddingsvej 19, 3390 Hundested
+    web: https://www.molenhundested.dk/
+  - id: kamelens-kys
+    navn: Kamelens Kys
+    adresse: Nordre Beddingsvej 39, 3390 Hundested
+    facebook: https://www.facebook.com/Kamelenskys/
+    note: Kunst og café
+  - id: spisehuset-knud
+    navn: Spisehuset Knud
+    adresse: Havnegade 18, 3390 Hundested
+    web: https://www.knud.biz/
+  - id: brasserie-kyst
+    navn: Brasserie Kyst
+    adresse: Nordre Beddingsvej 31, 3390 Hundested
+    web: https://www.brasseriekyst.dk/
+  - id: fjordens-cafe
+    navn: Fjordens Café og Ishus
+    adresse: Havnegade 16, 3390 Hundested
+    note: >
+      Café, is og minigolf. Domænet fjordenscafeogishus.dk viser nu en
+      casinoside (tjekket 27. oktober 2026) og må ikke linkes til.
+  - id: det-lille-kafferisteri
+    navn: Det lille Kafferisteri
+    adresse: Kajgaden 7D, 3390 Hundested
+    web: https://detlillekafferisteri.dk/
+  - id: lynaes-madbar
+    navn: Madbaren i Lynæs
+    adresse: Lynæs Havnevej 3D, 3390 Hundested
+    web: https://surfcenter.dk/mad-og-drikke/madbar/
+    note: Hører til Lynæs Surfcenter. Fællesspisning om onsdagen ifølge VisitNordsjælland (ikke bekræftet).
+  - id: lynaes-strandbar
+    navn: Strandbaren i Lynæs
+    adresse: Lynæs Havnevej, 3390 Hundested
+    web: https://surfcenter.dk/mad-og-drikke/strandbar/
+    note: Sæsonåben
+
+steder:
+  - id: hundested-havn
+    navn: Hundested Havn
+    type: kultur
+    adresse: Nordre Beddingsvej 24, 3390 Hundested
+    web: https://hundestedhavn.dk/
+    facebook: https://www.facebook.com/pg/oplevhundested/events/
+  - id: oplev-hundested
+    navn: Oplev Hundested (Hundested Erhverv)
+    type: kultur
+    web: https://oplevhundested.dk/
+    facebook: https://www.facebook.com/oplevhundested/
+    instagram: https://instagram.com/oplevhundested
+  - id: folkely
+    navn: Folkely Festival
+    type: kultur
+    web: https://www.folkely.dk/
+    note: Særligt fokus. Facebook og Instagram skal tilføjes, når adresserne er bekræftet.
+  - id: lynaes-surfcenter
+    navn: Lynæs Surfcenter
+    type: kultur
+    adresse: Lynæs Havnevej 3D, 3390 Hundested
+    web: https://surfcenter.dk/
+  - id: sandskulpturfestival
+    navn: Hundested Sandskulpturfestival
+    type: kultur
+    adresse: Kajgaden 7 C, 3390 Hundested
+    web: http://www.sandfestival.dk/
+  - id: knud-rasmussens-hus
+    navn: Knud Rasmussens Hus
+    type: kultur
+    adresse: Knud Rasmussens Vej 9, 3390 Hundested
+    web: https://knudrasmus.dk/
+  - id: x-porten
+    navn: X-Porten
+    type: kultur
+    adresse: Nordre Beddingsvej 39, 3390 Hundested
+    web: http://www.x-porten.dk/
+  - id: dyssekilde
+    navn: Økosamfundet Dyssekilde
+    type: kultur
+    adresse: Solen 15, Torup, 3390 Hundested
+    web: http://www.dyssekilde.dk/
+  - id: hundested-harbour-inn
+    navn: Hundested Harbour Inn og Havnehytter
+    type: overnatning
+    adresse: Sydhavnsvej 2, 3390 Hundested
+    web: https://hundestedinn.dk/
+  - id: hms
+    navn: Hundested Motor- og Sejlklub
+    type: forening
+    adresse: Nordre Beddingsvej 37, 3390 Hundested
+    web: http://www.hms-hundested.dk/
+  - id: lynaes-sejlklub
+    navn: Lynæs Sejl- og Kajakklub
+    type: forening
+    web: https://www.lynaes.dk/
+  - id: marineforeningen
+    navn: Marineforeningen Hundested
+    type: forening
+    adresse: Havnegade 8, 3390 Hundested
+    web: http://www.hundested-marineforening.dk/
+  - id: dykkerklubben-hajen
+    navn: Dykkerklubben Hajen
+    type: forening
+    adresse: Amtsvejen 8, 3390 Hundested
+    web: http://www.hajen.dk/
+  - id: hundested-ik
+    navn: Hundested IK (fodbold og futsal)
+    type: forening
+    note: Hjemmeside ikke fundet endnu.
