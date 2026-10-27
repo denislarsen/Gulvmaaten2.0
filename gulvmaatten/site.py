@@ -13,6 +13,7 @@ kreditering. Kilder med `billeder: nej` giver aldrig billeder.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 from dataclasses import dataclass, field, replace
@@ -21,12 +22,14 @@ from html import escape
 from pathlib import Path
 
 from .config import load_settings
-from .db import Database
+from .db import DATA_DIR, Database
 from .kalender import fremhaevede, kalender_for
 from .mad import karakter
 from .models import Article, Event, Publication, RawItem, ReviewStatus
 
-SITE_DIR = Path("site")
+# Lokalt bygges siden i site/. På en server ligger den på den vedvarende disk.
+SITE_DIR = DATA_DIR / "site" if (os.environ.get("GULVMAATTEN_DATA") or os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")) \
+    else Path("site")
 BOLIG_KILDE = "boliger-til-salg"
 
 MAANEDER = ["januar", "februar", "marts", "april", "maj", "juni", "juli", "august",
@@ -74,10 +77,21 @@ def kr(beloeb) -> str:
     return f"{int(beloeb):,} kr.".replace(",", ".") if beloeb else "Pris ikke oplyst"
 
 
-def sektion(a: Article) -> str:
-    if a.kategori == "folkely" or "folkely" in (t.lower() for t in a.tags):
+HIK_TAGS = {"hundested ik", "futsal", "hundested futsal"}
+
+
+def sektion(a: Article, kilde_id: str = "") -> str:
+    tags = {t.lower() for t in a.tags}
+    if a.kategori == "folkely" or "folkely" in tags:
         return "folkely"
+    if kilde_id.startswith("hundested-ik") or tags & HIK_TAGS:
+        return "hik"
     return SEKTIONER.get(a.kategori, "nyheder")
+
+
+def er_hik_kamp(e: Event) -> bool:
+    return e.source_id.startswith("hundested-ik") or (
+        e.titel.startswith(("Fodbold:", "Futsal:")) and "Hundested IK" in e.titel)
 
 
 @dataclass
@@ -139,8 +153,10 @@ def saml_sider(db: Database, forhaandsvisning: bool = False) -> list[Side]:
             continue
         slug = pub.slug if pub else f"{slugify(a.overskrift)}-{a.id}"
         score = max([db.score_for(r) for r in a.raw_item_ids[:1]] or [0])
+        foerste = db.get_raw_item_by_id(a.raw_item_ids[0]) if a.raw_item_ids else None
         sider.append(Side(artikel=a, slug=slug, score=score, udkast=a.status != ReviewStatus.PUBLISHED,
-                          sektion=sektion(a), rettelse=pub.rettelsesnote if pub else ""))
+                          sektion=sektion(a, foerste.source_id if foerste else ""),
+                          rettelse=pub.rettelsesnote if pub else ""))
     # Vigtigst og nyest først
     sider.sort(key=lambda s: (s.score, s.artikel.oprettet), reverse=True)
     return sider
@@ -164,23 +180,22 @@ def fordel(forside: Forside) -> dict:
 
     alle = [s for s in forside.sider if s.sektion != "udland"]
     med_billede = [s for s in alle if s.artikel.billede_url]
-    mad = [s for s in forside.sider if s.sektion == "mad"]
-    folkely = [s for s in forside.sider if s.sektion == "folkely"]
+    egne_baand = ("mad", "folkely", "hik")
     pladser = {
-        "mad": tag(mad, 1),
-        # Den vigtigste Folkely-historie kan blive tophistorie; resten får et lille bånd
-        # Folkely må kun blive tophistorie, når der ikke er andet med billede
-        "tophistorie": tag([s for s in med_billede if s.sektion != "folkely"] or med_billede or alle, 1),
+        "mad": tag([s for s in forside.sider if s.sektion == "mad"], 1),
+        # Folkely og Hundested IK har egne bånd og bliver kun tophistorie, når der ikke er andet
+        "tophistorie": tag([s for s in med_billede if s.sektion not in egne_baand] or med_billede or alle, 1),
     }
-    pladser["folkely"] = tag(folkely, 2)
-    pladser["sidekolonne"] = tag([s for s in alle if s.sektion not in ("mad", "folkely")], 2)
+    pladser["folkely"] = tag([s for s in forside.sider if s.sektion == "folkely"], 2)
+    pladser["hik"] = tag([s for s in forside.sider if s.sektion == "hik"], 3)
+    pladser["sidekolonne"] = tag([s for s in alle if s.sektion not in egne_baand], 2)
     # Nyheder er alt, der ikke har sin egen sektion
     pladser["nyheder"] = tag([s for s in alle if s.sektion == "nyheder"], 8)
     for sek, antal in (("havn", 6), ("sport", 3), ("udland", 3)):
         pladser[sek] = tag([s for s in forside.sider if s.sektion == sek], antal)
     # Er der ikke nok nyheder, fyldes der op med det, der er tilbage
     if len(pladser["nyheder"]) < 4:
-        pladser["nyheder"] += tag([s for s in alle if s.sektion not in ("mad", "folkely")], 4 - len(pladser["nyheder"]))
+        pladser["nyheder"] += tag([s for s in alle if s.sektion not in egne_baand], 4 - len(pladser["nyheder"]))
     return _unikke_billeder(pladser)
 
 
@@ -188,7 +203,7 @@ def _unikke_billeder(pladser: dict) -> dict:
     """Det samme billede må kun stå én gang på forsiden. Pladserne gennemgås i
     den rækkefølge, de vises; senere artikler med et brugt billede vises uden."""
     brugte: set[str] = set()
-    for plads in ("tophistorie", "sidekolonne", "nyheder", "folkely", "havn", "mad", "sport", "udland"):
+    for plads in ("tophistorie", "sidekolonne", "nyheder", "folkely", "hik", "havn", "mad", "sport", "udland"):
         nye = []
         for s in pladser.get(plads, []):
             url = s.artikel.billede_url
@@ -422,6 +437,24 @@ def _folkely(sider: list[Side]) -> str:
     return f'<section class="folkely"><h2 class="folkely__navn">Folkely</h2>{punkter}</section>'
 
 
+def _hik(sider: list[Side], kampe: list[Event]) -> str:
+    """Hundested IK: klubbens seneste historier og de næste hjemmekampe."""
+    if not sider and not kampe:
+        return ""
+    historier = "".join(
+        f'<a class="hik__historie" href="{s.href}">'
+        + (f'<img src="{escape(s.artikel.billede_url)}" alt="" loading="lazy" referrerpolicy="no-referrer">'
+           if s.artikel.billede_url else "")
+        + f'<span>{_udkast_maerke(s)}{escape(s.artikel.overskrift)}</span></a>' for s in sider)
+    kampliste = "".join(
+        f'<li><a href="{escape(e.url)}" rel="noopener"><b>{UGEDAGE[e.start.weekday()]} {e.start.day}/{e.start.month}'
+        f'{" " + _klokken(e) if _klokken(e) else ""}</b> {escape(e.titel.split(":", 1)[-1].strip())}</a></li>'
+        for e in kampe[:4])
+    kamp_html = f'<div class="hik__kampe"><h3>Næste hjemmekampe</h3><ul>{kampliste}</ul></div>' if kampe else ""
+    return (f'<section class="hik"><h2 class="hik__navn">Hundested IK <small>futsal og fodbold</small></h2>'
+            f'<div class="hik__indhold"><div class="hik__historier">{historier}</div>{kamp_html}</div></section>')
+
+
 def _fod(rod: str = "") -> str:
     return (f'<footer class="fod"><p><b>Gulvmåtten</b> er et lokalt netmedie for Hundested. Navnet kommer fra '
             f'den gamle gratisavis, som mange brugte som gulvmåtte.</p>'
@@ -446,6 +479,7 @@ def forside_html(forside: Forside, nu: datetime) -> str:
         f'<div class="to-kolonner to-kolonner--bred">'
         f'{_sektion("nyheder", p["nyheder"])}{_det_sker(forside.kalender, nu)}</div>'
         f'{_folkely(p["folkely"])}'
+        f'{_hik(p["hik"], [e for e in forside.kalender if er_hik_kamp(e)])}'
         f'{_sektion("sport", p["sport"])}'
         f'{_sektion("havn", p["havn"])}'
         f'<div class="to-kolonner">{_mad_boks(p["mad"])}{_boliger(forside.boliger)}</div>'

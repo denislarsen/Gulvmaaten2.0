@@ -8,6 +8,9 @@ Fire slags kilder:
               titel og resumé hentes fra hver enkelt artikelside.
 - boligsiden  Boligsidens JSON-søgning. Hver bolig bliver et opslag med pris, areal
               m.m. i `data`.
+- dbu_kampe   Kampprogrammet på en klubside i DBU's Klub-CMS. Hver kamp bliver et
+              opslag med dato, hold og bane i `data`, så den kan komme direkte i
+              kalenderen uden at Claude skal læse den.
 
 Billeder gemmes som URL i `billede_url`, men kun for kilder hvor `billeder`
 er tilladt i kildeprofilen.
@@ -80,6 +83,10 @@ def _img_src(img, base: str) -> str:
     srcset = img.get("data-lazy-srcset") or img.get("srcset") or ""
     if srcset.strip():
         return urljoin(base, srcset.split(",")[0].split()[0])
+    # Nogle sider viser billedet som baggrund på et <div> i stedet for et <img>
+    m = re.search(r"url\((['\"]?)([^)'\"]+)\1\)", img.get("style") or "")
+    if m and _brugbart_billede(m.group(2)):
+        return urljoin(base, m.group(2))
     return ""
 
 
@@ -153,6 +160,14 @@ def parse_hel_side(source: Source, content: str) -> list[RawItem]:
                     billede_url=_og_image(soup, source.url))]
 
 
+def _billede_i_liste(node, sel: dict, base: str) -> str:
+    if not sel.get("billede"):
+        return ""
+    url = _img_src(node.select_one(sel["billede"]), base)
+    # Nogle CMS'er giver kun en lille udgave i listen; uden parametre får vi originalen
+    return url.split("?")[0] if url and sel.get("billede_uden_query") else url
+
+
 def parse_html(source: Source, content: str) -> list[RawItem]:
     sel = source.html
     if sel.get("hel_side"):
@@ -181,7 +196,7 @@ def parse_html(source: Source, content: str) -> list[RawItem]:
             titel=titel,
             tekst=_first_text(node, sel.get("resume", "")),
             dato_tekst=_all_text(node, sel.get("dato", "")),
-            billede_url=_img_src(node.select_one(sel["billede"]), source.url) if sel.get("billede") else "",
+            billede_url=_billede_i_liste(node, sel, source.url),
         ))
     return items
 
@@ -299,6 +314,52 @@ def parse_boligsiden(source: Source, content: str) -> list[RawItem]:
     return items
 
 
+# --- DBU Klub-CMS: kampprogram -----------------------------------------------------
+
+MAANEDER_DA = {m: i + 1 for i, m in enumerate(
+    ["januar", "februar", "marts", "april", "maj", "juni", "juli", "august",
+     "september", "oktober", "november", "december"])}
+
+
+def parse_dbu_kampe(source: Source, content: str) -> list[RawItem]:
+    """Kampene i klubsidens kampprogram ("Kom og se HI på hjemmebane"). Måneden
+    står i en overskriftsrække over kampene, dagen og klokkeslættet i hver række."""
+    soup = BeautifulSoup(content, "html.parser")
+    items = []
+    for program in soup.select("div.theme_ClubFixtures"):
+        maaned = aar = None
+        for tr in program.select("tr"):
+            klasser = tr.get("class") or []
+            if "monthRow" in klasser:
+                dele = tr.get_text(" ", strip=True).lower().split()
+                if len(dele) == 2 and dele[0] in MAANEDER_DA and dele[1].isdigit():
+                    maaned, aar = MAANEDER_DA[dele[0]], int(dele[1])
+                continue
+            if "match" not in klasser or maaned is None:
+                continue
+
+            def tekst(sel: str) -> str:
+                el = tr.select_one(sel)
+                return el.get_text(" ", strip=True) if el else ""
+
+            dag = tekst(".date").rstrip(".")
+            if not dag.isdigit():
+                continue
+            kl = tekst(".datetime span")
+            timer, minutter = (kl.split(".") + ["0"])[:2] if re.fullmatch(r"\d{1,2}\.\d{2}", kl) else ("0", "0")
+            start = datetime(aar, maaned, int(dag), int(timer), int(minutter))
+            hjemme, ude = tekst(".homeTeamName"), tekst(".awayTeamName")
+            raekke, hold, bane = tekst(".theme_ClubFixtures_poolinfo"), tekst(".tag_division"), tekst(".stadium")
+            url = urljoin(source.url, tr.get("data-url") or "")
+            items.append(RawItem(
+                source_id=source.id, url=url, titel=f"{hjemme} – {ude}",
+                tekst=f"{raekke}. {bane}.", dato_tekst=start.isoformat(),
+                data={"kamp": True, "start": start.isoformat(), "hjemme": hjemme, "ude": ude,
+                      "raekke": raekke, "hold": hold, "bane": bane},
+            ))
+    return items
+
+
 # --- Samlet ------------------------------------------------------------------
 
 def fetch_source(db: Database, source: Source, content: str | None = None,
@@ -318,6 +379,8 @@ def fetch_source(db: Database, source: Source, content: str | None = None,
             items = fetch_sitemap_items(db, source, content, fetcher)
         elif source.type == SourceType.BOLIGSIDEN:
             items = parse_boligsiden(source, content)
+        elif source.type == SourceType.DBU_KAMPE:
+            items = parse_dbu_kampe(source, content)
         else:
             items = parse_html(source, content)
     except Exception as e:  # noqa: BLE001 - vi vil rapportere alle fejl pr. kilde

@@ -141,6 +141,28 @@ kilder:
       også sted og pris. Faste tilbud (advokatvagt, lektiecafé) er kalenderstof,
       ikke nyheder.
 
+  - id: kamelens-kys
+    navn: Kamelens Kys
+    url: https://www.kamelenskys.dk/
+    type: html
+    kategori: spisested
+    by: Hundested
+    tillid: 4
+    frekvens: 24
+    billeder: ja
+    kun_kalender: true
+    aktiv: false
+    sprog: da
+    verificeret: false
+    html:
+      hel_side: true
+      resume: body
+    regler: >
+      Kulturcafé på havnen med mange arrangementer (livemusik, DJ, foredrag,
+      Camel Festival). Hjemmesiden afviser automatiske besøg med et bot-tjek
+      (28. oktober 2026), så kilden er slået fra. Muligheder: bed stedet om
+      at lade os hente siden, om et nyhedsbrev, eller find deres billetside.
+
   - id: halsnaes-bryghus-kalender
     navn: Halsnæs Bryghus, kalender
     url: https://www.halsbryg.dk/kalenderen/
@@ -287,6 +309,7 @@ kilder:
     frekvens: 6
     prioritet: 3
     billeder: ja
+    aktiv: false
     sprog: da
     verificeret: true
     regler: >
@@ -304,6 +327,7 @@ kilder:
     frekvens: 6
     billeder: nej
     kun_tip: true
+    aktiv: false
     sprog: da
     verificeret: true
     regler: >
@@ -314,6 +338,50 @@ kilder:
 
   # --- Sport -----------------------------------------------------------------------
 
+  - id: hundested-ik-nyheder
+    navn: Hundested IK, nyheder
+    url: https://www.hundestedik.dk/nyheder/
+    type: html
+    kategori: sport
+    by: Hundested
+    tillid: 4
+    frekvens: 12
+    prioritet: 2
+    billeder: ja
+    kalender: true
+    sprog: da
+    verificeret: true
+    html:
+      opslag: div.theme_newsFolder_itemWrap
+      titel: .theme_newsFolder_textWrap a
+      link: .theme_newsFolder_textWrap a
+      dato: .theme_newsFolder_dateStamp
+      resume: .theme_newsFolder_leadText
+      billede: .theme_newsFolder_img
+      billede_uden_query: true
+    regler: >
+      Klubbens egen hjemmeside (DBU Klub-CMS), verificeret 28. oktober 2026.
+      Både futsal og fodbold. Futsal har særligt fokus (se fokus_ord i
+      gulvmaatten.yaml). Børne- og ungdomsspillere nævnes aldrig ved navn.
+      Resultater skal stå i kilden; gæt aldrig en stilling.
+
+  - id: hundested-ik-kampe
+    navn: Hundested IK, hjemmekampe
+    url: https://www.hundestedik.dk/
+    type: dbu_kampe
+    kategori: sport
+    by: Hundested
+    tillid: 5
+    frekvens: 24
+    billeder: nej
+    kun_kalender: true
+    sprog: da
+    verificeret: true
+    regler: >
+      Kampprogrammet "Kom og se HI på hjemmebane" på klubbens forside. Kun
+      DBU-fodbold; futsalkampene står der ikke. Kampene kommer direkte i
+      kalenderen uden Claude.
+
   - id: hundested-ik
     navn: Hundested IK (fodbold og futsal) på Facebook
     url: https://rss.app/feeds/FyqmZsm42fgKZEPp.xml
@@ -322,17 +390,14 @@ kilder:
     by: Hundested
     tillid: 4
     frekvens: 6
-    prioritet: 2
     billeder: ja
     kalender: true
+    aktiv: false
     sprog: da
     verificeret: true
     regler: >
-      Klubbens egen Facebook-side via rss.app (verificeret 27. oktober 2026).
-      Både futsal og fodbold. Futsal har særligt fokus (se fokus_ord i
-      gulvmaatten.yaml). Kampe med tid og sted kommer i kalenderen. Børne- og
-      ungdomsspillere nævnes aldrig ved navn. Resultater skal stå i opslaget;
-      gæt aldrig en stilling.
+      Slået fra 28. oktober 2026: vi prøver uden rss.app og bruger klubbens
+      egen hjemmeside. Kan slås til igen med aktiv: true.
 
   # --- Boliger --------------------------------------------------------------------
 

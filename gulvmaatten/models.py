@@ -26,6 +26,7 @@ class SourceType(str, Enum):
     HTML = "html"
     SITEMAP = "sitemap"  # Hjemmesidens sitemap.xml, til sider hvor listen laves med JavaScript
     BOLIGSIDEN = "boligsiden"  # Boligsidens JSON-søgning, til boksen med boliger til salg
+    DBU_KAMPE = "dbu_kampe"    # Kampprogram fra en klubside i DBU's Klub-CMS
 
 
 class ReviewStatus(str, Enum):
