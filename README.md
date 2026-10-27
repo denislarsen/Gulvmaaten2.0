@@ -34,7 +34,8 @@ Det mangler:
 
 - Futsal: Hundested IK's egen side er ikke fundet. Kilden står i
   `sources.yaml` som inaktiv, indtil vi har en adresse
-- Halsnæs Bibliotekerne og Halsnæs Avis' egen side (sn.dk dækker begge aviser)
+- Halsnæs Bibliotekerne. (Halsnæs Avis, tidligere Halsnæs Posten, dækkes via
+  Sjællandske Mediers Halsnæs-side på sn.dk)
 - Sociale medier hentes ikke automatisk (se nedenfor)
 - Opfølgning: opdatering af artikler og markering af aflyste arrangementer
 

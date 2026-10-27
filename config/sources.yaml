@@ -152,7 +152,7 @@ kilder:
   # --- Lokale medier ---------------------------------------------------------------
 
   - id: faa-halsnaes
-    navn: Frederiksborg Amts Avis, Halsnæs
+    navn: Halsnæs Avis / Frederiksborg Amts Avis (sn.dk)
     url: https://frederiksborgamtsavis.sn.dk/halsnaes
     type: html
     kategori: medie
@@ -167,7 +167,9 @@ kilder:
       titel: h2
       resume: .card__kicker
     regler: >
-      Konkurrerende medie (Sjællandske Medier, også udgiver af Halsnæs Avis).
+      Konkurrerende medie. Halsnæs Avis (tidligere Halsnæs Posten) og
+      Frederiksborg Amts Avis udgives begge af Sjællandske Medier og deler
+      denne side på sn.dk.
       Bruges kun som tip: vi skriver aldrig deres tekst om og bruger aldrig
       deres billeder. En historie herfra kræver en selvstændig kilde, fx
       kommunen eller arrangøren. Resuméet er avisens stednavn (fx "Hundested").
