@@ -28,6 +28,16 @@ FLERTAL = {"Villa": "villaer", "Rækkehus": "rækkehuse", "Ejerlejlighed": "ejer
 UGEDAGE = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"]
 
 
+def _erstat_forrige(db: Database, tag: str, ny_id: int) -> None:
+    """Sidste uges udgave er forældet. Er den ikke godkendt, afvises den, så
+    forsiden ikke viser to udgaver af samme faste historie."""
+    for a in db.get_articles(ReviewStatus.NEEDS_REVIEW):
+        if a.id != ny_id and tag in a.tags:
+            a.status = ReviewStatus.REJECTED
+            a.redaktoer_note = f"Erstattet af ugens nye udgave (#{ny_id})."
+            db.save_article(a)
+
+
 def _kr(beloeb: float) -> str:
     return f"{int(round(beloeb)):,} kr.".replace(",", ".")
 
@@ -63,7 +73,7 @@ def det_sker_i_ugen(db: Database, nu: datetime | None = None, max_linjer: int = 
     a = Article(
         overskrift=f"Det sker i Hundested i uge {uge}",
         resume=resume, broedtekst=broedtekst, kategori="arrangementer", by="Hundested",
-        tags=["service", f"det-sker-uge-{uge}"], kilder=kilder, risiko=RiskLevel.LOW,
+        tags=["service", "det-sker", f"det-sker-uge-{uge}"], kilder=kilder, risiko=RiskLevel.LOW,
         status=ReviewStatus.NEEDS_REVIEW,
         redaktoer_note="Skrevet automatisk ud fra kalenderen. Tjek, at intet er aflyst.",
         billede_url=next((e.billede_url for e in events if e.billede_url), ""),
@@ -72,6 +82,7 @@ def det_sker_i_ugen(db: Database, nu: datetime | None = None, max_linjer: int = 
         kilde = db.get_source(next(e.source_id for e in events if e.billede_url == a.billede_url))
         a.billede_kredit = f"Foto: {kilde.navn}" if kilde else ""
     artikel_id = db.save_article(a)
+    _erstat_forrige(db, "det-sker", artikel_id)
     db.marker_koert(KOERSEL_UGEN, nu)
     return artikel_id
 
@@ -121,5 +132,6 @@ def boligmarkedet(db: Database, nu: datetime | None = None) -> int | None:
         redaktoer_note="Skrevet automatisk ud fra Boligsidens liste for 3390.",
     )
     artikel_id = db.save_article(a)
+    _erstat_forrige(db, "boligmarkedet", artikel_id)
     db.marker_koert(KOERSEL_BOLIG, nu)
     return artikel_id

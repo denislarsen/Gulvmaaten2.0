@@ -256,7 +256,12 @@ def fetch_sitemap_items(db: Database, source: Source, content: str, fetcher: Fet
         if existing and existing.dato_tekst == lastmod:
             items.append(existing)
             continue
-        items.append(parse_article_page(source, url, fetcher(url), dato_tekst=lastmod))
+        item = parse_article_page(source, url, fetcher(url), dato_tekst=lastmod)
+        # Kun ændringsdatoen er ny (fx fordi sitemappet skifter tidszone): siden er
+        # den samme og må ikke tælle som ændret, ellers vurderes og skrives den igen.
+        if existing and (existing.titel, existing.tekst) == (item.titel, item.tekst):
+            item.content_hash = existing.content_hash
+        items.append(item)
     return items
 
 

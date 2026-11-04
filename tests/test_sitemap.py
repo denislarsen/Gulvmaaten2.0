@@ -54,8 +54,36 @@ def test_fetch_sitemap_henter_kun_nye_sider(db):
     assert r2.uaendrede == 3
     assert hentede == [], "sider med uændret lastmod må ikke hentes igen"
 
-    # Ændret lastmod på én side udløser én ny hentning og markeres som ændret
+    # Ændret lastmod på én side udløser én ny hentning; har siden fået nyt indhold,
+    # markeres den som ændret
     nyt = fixture_text("sitemap.xml").replace("2026-10-18T09:00:00+00:00", "2026-10-21T10:00:00+00:00")
-    r3 = fetch_source(db, src, content=nyt, fetcher=fetcher)
+
+    def fetcher_nyt_indhold(url: str) -> str:
+        hentede.append(url)
+        return fixture_text("artikel.html").replace("</h1>", " (opdateret)</h1>")
+
+    r3 = fetch_source(db, src, content=nyt, fetcher=fetcher_nyt_indhold)
     assert hentede == ["https://www.eksempel.dk/nyheder/hoering-lokalplan-42"]
     assert r3.aendrede == 1 and r3.uaendrede == 2
+
+
+def test_ny_tidszone_i_sitemap_er_ikke_en_aendring(db):
+    """halsnaes.dk skiftede fra +00:00 til +02:00 i sitemappet. Siderne var de samme."""
+    src = sitemap_source()
+    db.upsert_source(src)
+    side = "<html><head><title>Ny legeplads</title><meta name='description' content='Byggeriet starter.'></head></html>"
+    gammel = """<urlset><url><loc>https://www.eksempel.dk/nyheder/ny-legeplads</loc>
+               <lastmod>2026-10-20T07:30:00+00:00</lastmod></url></urlset>"""
+    hentet = []
+
+    def fetcher(url):
+        hentet.append(url)
+        return side
+
+    assert fetch_source(db, src, content=gammel, fetcher=fetcher).nye == 1
+    ny = gammel.replace("+00:00", "+02:00")
+    r = fetch_source(db, src, content=ny, fetcher=fetcher)
+    assert r.aendrede == 0 and r.uaendrede == 1
+    # Den nye dato gemmes, så siden ikke hentes igen næste gang
+    fetch_source(db, src, content=ny, fetcher=fetcher)
+    assert len(hentet) == 2
