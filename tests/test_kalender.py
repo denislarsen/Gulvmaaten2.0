@@ -100,3 +100,16 @@ def test_boligmarkedet(db):
     assert "5 villaer" in a.broedtekst and "3.000.000 kr." in a.broedtekst
     assert "Billigst er Vej 0" in a.broedtekst and "kr.." not in a.broedtekst
     assert a.resume.startswith("2 nye på markedet")
+
+
+def test_ny_ugeudgave_erstatter_sidste_uges_udkast(db):
+    from datetime import timedelta
+
+    for i in range(4):
+        db.save_event(Event(titel=f"Arrangement {i}", start=datetime(2026, 10, 28 + i, 19), by="Hundested"))
+    forrige = det_sker_i_ugen(db, NU)
+    for i in range(4):
+        db.save_event(Event(titel=f"Næste uge {i}", start=datetime(2026, 11, 4 + i, 19), by="Hundested"))
+    ny = det_sker_i_ugen(db, NU + timedelta(days=7))
+    assert db.get_article(forrige).status == ReviewStatus.REJECTED
+    assert db.get_article(ny).status == ReviewStatus.NEEDS_REVIEW

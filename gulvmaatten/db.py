@@ -278,10 +278,10 @@ class Database:
             )
             self.conn.commit()
             return "aendret"
-        # Billede og strukturerede felter tæller ikke som en ændring af opslaget,
-        # men holdes opdateret.
-        self.conn.execute("UPDATE raw_items SET sidst_set=?, billede_url=?, data=? WHERE id=?",
-                          (now, item.billede_url, json.dumps(item.data), item.id))
+        # Billede, strukturerede felter og datotekst (fx en ny tidszone i et sitemap)
+        # tæller ikke som en ændring af opslaget, men holdes opdateret.
+        self.conn.execute("UPDATE raw_items SET sidst_set=?, billede_url=?, data=?, dato_tekst=? WHERE id=?",
+                          (now, item.billede_url, json.dumps(item.data), item.dato_tekst, item.id))
         self.conn.commit()
         return "uaendret"
 
